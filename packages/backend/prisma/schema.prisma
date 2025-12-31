@@ -1,0 +1,529 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Organizations & Users
+// ============================================
+
+model Organization {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(255)
+  slug          String   @unique @db.VarChar(100)
+
+  // Subscription
+  plan          String   @default("trial") @db.VarChar(50)
+  planStartedAt DateTime?
+  trialEndsAt   DateTime?
+
+  // Details
+  industry      String?  @db.VarChar(100)
+  employeeCount String?  @db.VarChar(50)
+  country       String?  @db.VarChar(2)
+  timezone      String   @default("UTC") @db.VarChar(50)
+
+  // Settings
+  settings      Json     @default("{}")
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  members       OrganizationMember[]
+  frameworks    OrganizationFramework[]
+  controls      Control[]
+  evidence      Evidence[]
+  policies      Policy[]
+  integrations  Integration[]
+  tasks         Task[]
+  auditLogs     AuditLog[]
+  complianceScores ComplianceScore[]
+
+  @@index([slug])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique @db.VarChar(255)
+  email     String   @db.VarChar(255)
+  firstName String?  @db.VarChar(100)
+  lastName  String?  @db.VarChar(100)
+  avatarUrl String?
+
+  // Preferences
+  preferences Json @default("{}")
+
+  // Metadata
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  memberships        OrganizationMember[]
+  ownedControls      Control[]            @relation("ControlOwner")
+  collectedEvidence  Evidence[]           @relation("EvidenceCollector")
+  reviewedEvidence   Evidence[]           @relation("EvidenceReviewer")
+  ownedPolicies      Policy[]             @relation("PolicyOwner")
+  approvedPolicies   Policy[]             @relation("PolicyApprover")
+  policyVersions     PolicyVersion[]
+  assignedTasks      Task[]               @relation("TaskAssignee")
+  createdTasks       Task[]               @relation("TaskCreator")
+  taskComments       TaskComment[]
+  connectedIntegrations Integration[]
+  auditLogs          AuditLog[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model OrganizationMember {
+  id             String    @id @default(uuid())
+  organizationId String
+  userId         String
+  role           String    @default("member") @db.VarChar(50)
+
+  // Invitation tracking
+  invitedById    String?
+  invitedAt      DateTime?
+  acceptedAt     DateTime?
+
+  // Metadata
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ============================================
+// Compliance Frameworks
+// ============================================
+
+model Framework {
+  id          String   @id @default(uuid())
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?
+  version     String?  @db.VarChar(50)
+  category    String?  @db.VarChar(100)
+  regions     String[]
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  requirements FrameworkRequirement[]
+  organizations OrganizationFramework[]
+}
+
+model FrameworkRequirement {
+  id          String   @id @default(uuid())
+  frameworkId String
+  code        String   @db.VarChar(100)
+  name        String   @db.VarChar(255)
+  description String?
+  parentId    String?
+  category    String?  @db.VarChar(100)
+  guidance    String?
+  implementationGuidance String?
+  sortOrder   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  framework   Framework              @relation(fields: [frameworkId], references: [id])
+  parent      FrameworkRequirement?  @relation("RequirementHierarchy", fields: [parentId], references: [id])
+  children    FrameworkRequirement[] @relation("RequirementHierarchy")
+  controlMappings ControlFrameworkMapping[]
+
+  @@unique([frameworkId, code])
+  @@index([frameworkId])
+  @@index([parentId])
+}
+
+model OrganizationFramework {
+  id             String    @id @default(uuid())
+  organizationId String
+  frameworkId    String
+  status         String    @default("active") @db.VarChar(50)
+  targetDate     DateTime?
+  completedAt    DateTime?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  framework      Framework    @relation(fields: [frameworkId], references: [id])
+
+  @@unique([organizationId, frameworkId])
+  @@index([organizationId])
+}
+
+// ============================================
+// Controls
+// ============================================
+
+model Control {
+  id                   String    @id @default(uuid())
+  organizationId       String
+  code                 String?   @db.VarChar(100)
+  name                 String    @db.VarChar(255)
+  description          String?
+  implementationStatus String    @default("not_started") @db.VarChar(50)
+  implementationNotes  String?
+  ownerId              String?
+  riskLevel            String?   @db.VarChar(50)
+  isAutomated          Boolean   @default(false)
+  automationSource     String?   @db.VarChar(100)
+  lastReviewedAt       DateTime?
+  nextReviewAt         DateTime?
+  reviewFrequencyDays  Int       @default(90)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  // Relations
+  organization      Organization              @relation(fields: [organizationId], references: [id])
+  owner             User?                     @relation("ControlOwner", fields: [ownerId], references: [id])
+  frameworkMappings ControlFrameworkMapping[]
+  evidenceLinks     EvidenceControlLink[]
+  policyLinks       PolicyControlLink[]
+  tasks             Task[]
+
+  @@index([organizationId])
+  @@index([organizationId, implementationStatus])
+  @@index([ownerId])
+}
+
+model ControlFrameworkMapping {
+  id                     String   @id @default(uuid())
+  controlId              String
+  frameworkRequirementId String
+  coverage               String   @default("full") @db.VarChar(50)
+  notes                  String?
+
+  createdAt              DateTime @default(now())
+
+  // Relations
+  control              Control              @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  frameworkRequirement FrameworkRequirement @relation(fields: [frameworkRequirementId], references: [id])
+
+  @@unique([controlId, frameworkRequirementId])
+  @@index([controlId])
+  @@index([frameworkRequirementId])
+}
+
+// ============================================
+// Evidence
+// ============================================
+
+model Evidence {
+  id             String    @id @default(uuid())
+  organizationId String
+  title          String    @db.VarChar(255)
+  description    String?
+  type           String    @db.VarChar(50)
+  source         String    @default("manual") @db.VarChar(100)
+  fileKey        String?
+  fileName       String?   @db.VarChar(255)
+  fileSize       Int?
+  fileType       String?   @db.VarChar(100)
+  collectedAt    DateTime  @default(now())
+  collectedById  String?
+  integrationId  String?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  reviewStatus   String    @default("pending") @db.VarChar(50)
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNotes    String?
+  metadata       Json      @default("{}")
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  // Relations
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  collectedBy    User?                 @relation("EvidenceCollector", fields: [collectedById], references: [id])
+  reviewedBy     User?                 @relation("EvidenceReviewer", fields: [reviewedById], references: [id])
+  integration    Integration?          @relation(fields: [integrationId], references: [id])
+  controlLinks   EvidenceControlLink[]
+
+  @@index([organizationId])
+  @@index([organizationId, source])
+  @@index([organizationId, collectedAt])
+}
+
+model EvidenceControlLink {
+  id         String   @id @default(uuid())
+  evidenceId String
+  controlId  String
+  relevance  String   @default("primary") @db.VarChar(50)
+  notes      String?
+
+  createdAt  DateTime @default(now())
+
+  // Relations
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  control    Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceId, controlId])
+  @@index([evidenceId])
+  @@index([controlId])
+}
+
+// ============================================
+// Policies
+// ============================================
+
+model Policy {
+  id                  String    @id @default(uuid())
+  organizationId      String
+  code                String?   @db.VarChar(100)
+  title               String    @db.VarChar(255)
+  description         String?
+  category            String?   @db.VarChar(100)
+  status              String    @default("draft") @db.VarChar(50)
+  ownerId             String?
+  approvedById        String?
+  approvedAt          DateTime?
+  lastReviewedAt      DateTime?
+  nextReviewAt        DateTime?
+  reviewFrequencyDays Int       @default(365)
+  isAiGenerated       Boolean   @default(false)
+  aiTemplateId        String?   @db.VarChar(100)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  // Relations
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  owner          User?               @relation("PolicyOwner", fields: [ownerId], references: [id])
+  approvedBy     User?               @relation("PolicyApprover", fields: [approvedById], references: [id])
+  versions       PolicyVersion[]
+  controlLinks   PolicyControlLink[]
+  tasks          Task[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+}
+
+model PolicyVersion {
+  id            String   @id @default(uuid())
+  policyId      String
+  version       Int
+  content       String
+  fileKey       String?
+  changeSummary String?
+  createdById   String?
+
+  createdAt     DateTime @default(now())
+
+  // Relations
+  policy    Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation(fields: [createdById], references: [id])
+
+  @@unique([policyId, version])
+  @@index([policyId])
+}
+
+model PolicyControlLink {
+  id        String   @id @default(uuid())
+  policyId  String
+  controlId String
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  policy  Policy  @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  control Control @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, controlId])
+  @@index([policyId])
+  @@index([controlId])
+}
+
+// ============================================
+// Integrations
+// ============================================
+
+model Integration {
+  id                   String    @id @default(uuid())
+  organizationId       String
+  type                 String    @db.VarChar(100)
+  name                 String    @db.VarChar(255)
+  status               String    @default("pending") @db.VarChar(50)
+  errorMessage         String?
+  credentialsEncrypted String?
+  config               Json      @default("{}")
+  lastSyncAt           DateTime?
+  nextSyncAt           DateTime?
+  syncFrequencyMinutes Int       @default(60)
+  connectedById        String?
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  // Relations
+  organization  Organization      @relation(fields: [organizationId], references: [id])
+  connectedBy   User?             @relation(fields: [connectedById], references: [id])
+  logs          IntegrationLog[]
+  evidence      Evidence[]
+
+  @@index([organizationId])
+  @@index([organizationId, type])
+  @@index([status])
+}
+
+model IntegrationLog {
+  id             String    @id @default(uuid())
+  integrationId  String
+  operation      String    @db.VarChar(100)
+  status         String    @db.VarChar(50)
+  itemsProcessed Int       @default(0)
+  itemsFailed    Int       @default(0)
+  errorMessage   String?
+  details        Json      @default("{}")
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  durationMs     Int?
+
+  // Relations
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([startedAt])
+}
+
+// ============================================
+// Tasks
+// ============================================
+
+model Task {
+  id             String    @id @default(uuid())
+  organizationId String
+  title          String    @db.VarChar(255)
+  description    String?
+  type           String    @default("general") @db.VarChar(50)
+  priority       String    @default("medium") @db.VarChar(50)
+  status         String    @default("open") @db.VarChar(50)
+  assigneeId     String?
+  createdById    String?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  controlId      String?
+  policyId       String?
+  tags           String[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy    User?         @relation("TaskCreator", fields: [createdById], references: [id])
+  control      Control?      @relation(fields: [controlId], references: [id])
+  policy       Policy?       @relation(fields: [policyId], references: [id])
+  comments     TaskComment[]
+
+  @@index([organizationId])
+  @@index([assigneeId])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([controlId])
+}
+
+model TaskComment {
+  id        String    @id @default(uuid())
+  taskId    String
+  content   String
+  authorId  String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+}
+
+// ============================================
+// Audit & Analytics
+// ============================================
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?
+  userId         String?
+  userEmail      String?  @db.VarChar(255)
+  action         String   @db.VarChar(100)
+  entityType     String   @db.VarChar(100)
+  entityId       String?
+  changes        Json?
+  ipAddress      String?  @db.VarChar(45)
+  userAgent      String?
+  requestId      String?  @db.VarChar(100)
+  metadata       Json     @default("{}")
+
+  createdAt      DateTime @default(now())
+
+  // Relations
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([action])
+}
+
+model ComplianceScore {
+  id               String    @id @default(uuid())
+  organizationId   String
+  frameworkId      String?
+  overallScore     Decimal?  @db.Decimal(5, 2)
+  controlCoverage  Decimal?  @db.Decimal(5, 2)
+  evidenceCoverage Decimal?  @db.Decimal(5, 2)
+  policyCoverage   Decimal?  @db.Decimal(5, 2)
+  controlsTotal        Int   @default(0)
+  controlsImplemented  Int   @default(0)
+  controlsInProgress   Int   @default(0)
+  controlsNotStarted   Int   @default(0)
+  evidenceTotal        Int   @default(0)
+  evidenceValid        Int   @default(0)
+  evidenceExpiring     Int   @default(0)
+  evidenceExpired      Int   @default(0)
+
+  calculatedAt     DateTime  @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, frameworkId])
+  @@index([organizationId])
+}

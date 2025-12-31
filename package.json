@@ -1,0 +1,34 @@
+{
+  "name": "lightsail",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compliance Automation SaaS Platform",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:backend": "pnpm --filter @lightsail/backend dev",
+    "dev:frontend": "pnpm --filter @lightsail/frontend dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "db:migrate": "pnpm --filter @lightsail/backend prisma migrate dev",
+    "db:generate": "pnpm --filter @lightsail/backend prisma generate",
+    "db:push": "pnpm --filter @lightsail/backend prisma db push",
+    "db:studio": "pnpm --filter @lightsail/backend prisma studio",
+    "db:seed": "pnpm --filter @lightsail/backend prisma db seed",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist"
+  },
+  "keywords": [
+    "compliance",
+    "soc2",
+    "iso27001",
+    "gdpr",
+    "saas"
+  ],
+  "author": "Lightsail Team",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
