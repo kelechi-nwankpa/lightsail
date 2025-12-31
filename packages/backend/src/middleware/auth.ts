@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { clerkMiddleware, getAuth, requireAuth as clerkRequireAuth } from '@clerk/express';
+import { clerkMiddleware, getAuth, requireAuth as clerkRequireAuth, clerkClient } from '@clerk/express';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors.js';
 import type { MemberRole } from '@lightsail/shared';
+import { prisma } from '../config/db.js';
 
 // Extend Express Request type
 declare global {
@@ -30,6 +31,28 @@ export function requireOrganization() {
 
     if (!auth.orgId) {
       throw new ForbiddenError('Organization context required. Please select an organization.');
+    }
+
+    // Ensure organization exists in our database (sync from Clerk)
+    const existingOrg = await prisma.organization.findUnique({
+      where: { id: auth.orgId },
+    });
+
+    if (!existingOrg) {
+      // Fetch org details from Clerk and create in our database
+      try {
+        const clerkOrg = await clerkClient.organizations.getOrganization({ organizationId: auth.orgId });
+        await prisma.organization.create({
+          data: {
+            id: auth.orgId,
+            name: clerkOrg.name,
+            slug: clerkOrg.slug || auth.orgId,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to sync organization from Clerk:', err);
+        throw new ForbiddenError('Failed to initialize organization. Please try again.');
+      }
     }
 
     // Attach organization ID to request for easy access

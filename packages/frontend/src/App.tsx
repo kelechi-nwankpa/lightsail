@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
+import ControlsPage from './pages/Controls';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
@@ -23,6 +24,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/controls"
+        element={
+          <ProtectedRoute>
+            <ControlsPage />
           </ProtectedRoute>
         }
       />

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useUser, useOrganization, OrganizationSwitcher, UserButton } from '@clerk/clerk-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, FileCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -22,11 +23,15 @@ export function DashboardPage() {
               />
             </div>
           </div>
+          <nav className="flex items-center gap-6">
+            <Link to="/dashboard" className="text-foreground font-medium">Dashboard</Link>
+            <Link to="/controls" className="text-muted-foreground hover:text-foreground">Controls</Link>
+          </nav>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {user?.firstName || user?.emailAddresses[0]?.emailAddress}
             </span>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </div>
       </header>

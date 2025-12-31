@@ -12,7 +12,7 @@ datasource db {
 // ============================================
 
 model Organization {
-  id            String   @id @default(uuid())
+  id            String   @id // Clerk org ID (org_xxxx)
   name          String   @db.VarChar(255)
   slug          String   @unique @db.VarChar(100)
 
