@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { useUser, useOrganization, OrganizationSwitcher, UserButton } from '@clerk/clerk-react';
+import { useUser, useOrganization, OrganizationSwitcher } from '@clerk/clerk-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { AppHeader } from '../components/layout/AppHeader';
 import {
   Shield,
   FileCheck,
@@ -13,12 +14,10 @@ import {
   FileText,
   Link2,
   Users,
-  Settings,
   Plus,
   Zap,
   Target,
   Calendar,
-  LayoutDashboard,
   HelpCircle,
   ExternalLink
 } from 'lucide-react';
@@ -337,51 +336,10 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">Lightsail</h1>
-            </div>
-            <OrganizationSwitcher
-              hidePersonal
-              appearance={{
-                elements: {
-                  rootBox: "flex items-center",
-                  organizationSwitcherTrigger: "px-3 py-1.5 rounded-md border hover:bg-muted"
-                }
-              }}
-            />
-          </div>
-          <nav className="flex items-center gap-1">
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 text-primary font-medium"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-            <Link
-              to="/controls"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <Shield className="h-4 w-4" />
-              Controls
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Settings className="h-5 w-5" />
-            </Button>
-            <UserButton />
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 pt-[81px]">
         {/* Welcome Header */}
         <div className="flex items-start justify-between mb-8">
           <div>

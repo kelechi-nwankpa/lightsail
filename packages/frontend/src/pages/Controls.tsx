@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useUser, useOrganization, OrganizationSwitcher } from '@clerk/clerk-react';
+import { useUser, useOrganization } from '@clerk/clerk-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { ControlsTable } from '../components/controls/ControlsTable';
@@ -8,6 +8,7 @@ import { ControlDetailPanel } from '../components/controls/ControlDetailPanel';
 import { ControlForm } from '../components/controls/ControlForm';
 import { FrameworkProgress } from '../components/frameworks/FrameworkProgress';
 import { EnableFrameworkDialog } from '../components/frameworks/EnableFrameworkDialog';
+import { AppHeader } from '../components/layout/AppHeader';
 import { useControls, useControl, useControlMutations } from '../hooks/use-controls';
 import { useFrameworks, useEnabledFrameworks } from '../hooks/use-frameworks';
 import {
@@ -16,9 +17,7 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  ChevronRight,
-  LayoutDashboard,
-  Shield
+  ChevronRight
 } from 'lucide-react';
 import type { ControlListItem, CreateControlInput, UpdateControlInput, EnabledFramework } from '../types/controls';
 import { cn } from '../lib/utils';
@@ -91,7 +90,7 @@ export default function Controls() {
   const [selectedFramework, setSelectedFramework] = useState<EnabledFramework | null>(null);
 
   const { controls, pagination, filters, isLoading, updateFilters, setPage, refetch } = useControls();
-  const { control: controlDetail, isLoading: isLoadingDetail } = useControl(selectedControl?.id || null);
+  const { control: controlDetail, isLoading: isLoadingDetail, refetch: refetchControlDetail } = useControl(selectedControl?.id || null);
   const { createControl, updateControl, isLoading: isMutating } = useControlMutations();
   const { frameworks, isLoading: isLoadingAllFrameworks } = useFrameworks();
   const { enabledFrameworks, isLoading: isLoadingFrameworks, enableFramework } = useEnabledFrameworks();
@@ -170,44 +169,10 @@ export default function Controls() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">Lightsail</h1>
-            </div>
-            <OrganizationSwitcher
-              appearance={{
-                elements: {
-                  rootBox: "flex items-center",
-                  organizationSwitcherTrigger: "px-3 py-1.5 rounded-md border hover:bg-muted"
-                }
-              }}
-            />
-          </div>
-          <nav className="flex items-center gap-1">
-            <a
-              href="/"
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </a>
-            <a
-              href="/controls"
-              className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 text-primary font-medium"
-            >
-              <Shield className="h-4 w-4" />
-              Controls
-            </a>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
-      <div className="flex">
+      <div className="flex pt-[57px]">
         <main className={cn(
           "flex-1 transition-all duration-300",
           selectedControl ? "mr-[420px]" : ""
@@ -378,14 +343,25 @@ export default function Controls() {
 
         {/* Detail Panel - Slide in from right */}
         {selectedControl && (
-          <div className="fixed right-0 top-0 h-full z-30 shadow-xl">
-            <ControlDetailPanel
-              control={controlDetail}
-              isLoading={isLoadingDetail}
-              onClose={handleCloseDetail}
-              onEdit={handleEdit}
+          <>
+            {/* Backdrop overlay - click to close */}
+            <div
+              className="fixed inset-0 bg-black/20 z-20 top-[57px]"
+              onClick={handleCloseDetail}
             />
-          </div>
+            <div className="fixed right-0 top-[57px] h-[calc(100vh-57px)] z-30 shadow-xl">
+              <ControlDetailPanel
+                control={controlDetail}
+                isLoading={isLoadingDetail}
+                onClose={handleCloseDetail}
+                onEdit={handleEdit}
+                onMappingChange={() => {
+                  refetchControlDetail();
+                  refetch();
+                }}
+              />
+            </div>
+          </>
         )}
       </div>
 

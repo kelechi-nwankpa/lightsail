@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
 import { Progress } from '../ui/progress';
 import { ControlStatusBadge } from './ControlStatusBadge';
+import { FrameworkMappingDialog } from '../frameworks/FrameworkMappingDialog';
+import { useControlMutations } from '../../hooks/use-controls';
 import {
   X,
   Edit2,
@@ -14,7 +17,8 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import type { ControlDetail } from '../../types/controls';
 import { cn } from '../../lib/utils';
@@ -24,6 +28,7 @@ interface ControlDetailPanelProps {
   isLoading: boolean;
   onClose: () => void;
   onEdit: () => void;
+  onMappingChange?: () => void;
 }
 
 function DetailSection({
@@ -92,7 +97,10 @@ function LoadingSkeleton() {
   );
 }
 
-export function ControlDetailPanel({ control, isLoading, onClose, onEdit }: ControlDetailPanelProps) {
+export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMappingChange }: ControlDetailPanelProps) {
+  const [isMappingDialogOpen, setIsMappingDialogOpen] = useState(false);
+  const { addMapping, removeMapping, isLoading: isMutating } = useControlMutations();
+
   if (!control && !isLoading) {
     return null;
   }
@@ -268,7 +276,12 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit }: Cont
             <DetailSection
               title={`Framework Mappings (${control.frameworkMappings.length})`}
               action={
-                <Button variant="ghost" size="sm" className="h-7 text-xs">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setIsMappingDialogOpen(true)}
+                >
                   <Plus className="h-3 w-3 mr-1" />
                   Add
                 </Button>
@@ -281,13 +294,22 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit }: Cont
                   <p className="text-xs text-muted-foreground mt-1">
                     Link this control to framework requirements
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => setIsMappingDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Mapping
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {control.frameworkMappings.map((m) => (
                     <div
                       key={m.id}
-                      className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                      className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group"
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline" className="text-xs font-medium">
@@ -305,6 +327,19 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit }: Cont
                         >
                           {m.coverage}
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600"
+                          disabled={isMutating}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await removeMapping(control.id, m.id);
+                            onMappingChange?.();
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                       <p className="text-sm font-medium">{m.requirementName}</p>
                       {m.requirementDescription && (
@@ -379,6 +414,19 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit }: Cont
           </div>
         ) : null}
       </div>
+
+      {/* Framework Mapping Dialog */}
+      {control && (
+        <FrameworkMappingDialog
+          open={isMappingDialogOpen}
+          onOpenChange={setIsMappingDialogOpen}
+          controlId={control.id}
+          controlName={control.name}
+          existingMappings={control.frameworkMappings}
+          onAddMapping={addMapping}
+          onSuccess={onMappingChange}
+        />
+      )}
     </div>
   );
 }
