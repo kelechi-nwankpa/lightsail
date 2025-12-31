@@ -54,9 +54,28 @@ export function useControls(initialFilters: ControlFilters = {}) {
       const endpoint = `/controls${queryString ? `?${queryString}` : ''}`;
 
       const response = await api.getWithPagination<ControlListItem[]>(endpoint);
-      setControls(response.data);
+
+      // Client-side filtering for hasEvidence (until backend supports it)
+      let filteredData = response.data;
+      if (filters.hasEvidence !== undefined) {
+        filteredData = response.data.filter(control => {
+          const hasEvidence = control.evidenceCount > 0;
+          return filters.hasEvidence ? hasEvidence : !hasEvidence;
+        });
+      }
+
+      setControls(filteredData);
       if (response.pagination) {
-        setPagination(response.pagination);
+        // Adjust pagination for client-side filtering
+        if (filters.hasEvidence !== undefined) {
+          setPagination({
+            ...response.pagination,
+            total: filteredData.length,
+            totalPages: Math.ceil(filteredData.length / response.pagination.pageSize) || 1,
+          });
+        } else {
+          setPagination(response.pagination);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch controls:', err);

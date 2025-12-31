@@ -52,6 +52,7 @@ export interface ControlFilters {
   frameworkId?: string;
   riskLevel?: RiskLevel;
   search?: string;
+  hasEvidence?: boolean; // true = has evidence, false = needs evidence
   page?: number;
   pageSize?: number;
 }
