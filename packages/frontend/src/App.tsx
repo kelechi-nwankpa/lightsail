@@ -3,6 +3,7 @@ import { SignedIn, SignedOut, useAuth } from '@clerk/clerk-react';
 import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import ControlsPage from './pages/Controls';
+import PoliciesPage from './pages/Policies';
 import { AppSidebarProvider, AppSidebar, useSidebar } from './components/layout/AppSidebar';
 import { cn } from './lib/utils';
 
@@ -43,6 +44,7 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/controls" element={<ControlsPage />} />
+          <Route path="/policies" element={<PoliciesPage />} />
           {/* Redirect root to dashboard when authenticated */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {/* Catch all - redirect to dashboard */}

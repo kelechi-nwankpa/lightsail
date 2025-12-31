@@ -3,6 +3,7 @@ import { healthRouter } from './health.js';
 import { authRouter } from './auth.js';
 import { frameworksRouter } from './frameworks.js';
 import { controlsRouter } from './controls.js';
+import { policiesRouter } from './policies.js';
 
 const router: IRouter = Router();
 
@@ -18,10 +19,12 @@ router.use('/frameworks', frameworksRouter);
 // Controls routes (protected)
 router.use('/controls', controlsRouter);
 
+// Policies routes (protected)
+router.use('/policies', policiesRouter);
+
 // TODO: Add more route modules as features are built
 // router.use('/organizations', organizationsRouter);
 // router.use('/evidence', evidenceRouter);
-// router.use('/policies', policiesRouter);
 // router.use('/tasks', tasksRouter);
 // router.use('/integrations', integrationsRouter);
 // router.use('/dashboard', dashboardRouter);
