@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { AppHeader } from '../components/layout/AppHeader';
 import {
   Shield,
   FileCheck,
@@ -19,11 +18,35 @@ import {
   Target,
   Calendar,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Eye,
+  Download,
+  MousePointer,
 } from 'lucide-react';
 import { useEnabledFrameworks } from '../hooks/use-frameworks';
 import { useControls } from '../hooks/use-controls';
 import { cn } from '../lib/utils';
+
+// Trust Center Metric Card (Vanta-style)
+function TrustCenterMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="text-center p-4 rounded-lg bg-muted/50">
+      <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+        <Icon className="h-4 w-4" />
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  );
+}
 
 // Monitoring Card Component (Vanta-style)
 function MonitoringCard({
@@ -334,27 +357,30 @@ export function DashboardPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50/50">
-      <AppHeader />
+  // Mock Trust Center data (replace with real API)
+  const trustCenterData = {
+    visits: 8,
+    views: 21,
+    downloads: 0,
+  };
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 pt-[81px]">
-        {/* Welcome Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {getGreeting()}, {user?.firstName || 'there'}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Here's your compliance overview for {organization.name}
-            </p>
-          </div>
-          <Button className="gap-2">
-            <Zap className="h-4 w-4" />
-            View Tasks
-          </Button>
+  return (
+    <main className="container mx-auto px-4 py-6">
+      {/* Welcome Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {getGreeting()}, {user?.firstName || 'there'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Here's your compliance overview for {organization.name}
+          </p>
         </div>
+        <Button className="gap-2">
+          <Zap className="h-4 w-4" />
+          View Tasks
+        </Button>
+      </div>
 
         {/* Compliance Progress Section */}
         <section className="mb-8">
@@ -613,7 +639,30 @@ export function DashboardPage() {
             </Card>
           </div>
         </div>
+
+        {/* Trust Center Section (Vanta-style) */}
+        <section className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Trust Center</h2>
+            <Link to="/trust-center">
+              <Button variant="ghost" size="sm" className="text-xs">
+                Manage <ExternalLink className="h-3 w-3 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-3 gap-4">
+                <TrustCenterMetric icon={MousePointer} label="Visits" value={trustCenterData.visits} />
+                <TrustCenterMetric icon={Eye} label="Page Views" value={trustCenterData.views} />
+                <TrustCenterMetric icon={Download} label="Downloads" value={trustCenterData.downloads} />
+              </div>
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Last 30 days
+              </p>
+            </CardContent>
+          </Card>
+        </section>
       </main>
-    </div>
   );
 }

@@ -1,14 +1,22 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useUser, useOrganization } from '@clerk/clerk-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../components/ui/breadcrumb';
 import { ControlsTable } from '../components/controls/ControlsTable';
 import { ControlFilters } from '../components/controls/ControlFilters';
 import { ControlDetailPanel } from '../components/controls/ControlDetailPanel';
 import { ControlForm } from '../components/controls/ControlForm';
 import { FrameworkProgress } from '../components/frameworks/FrameworkProgress';
 import { EnableFrameworkDialog } from '../components/frameworks/EnableFrameworkDialog';
-import { AppHeader } from '../components/layout/AppHeader';
 import { useControls, useControl, useControlMutations } from '../hooks/use-controls';
 import { useFrameworks, useEnabledFrameworks } from '../hooks/use-frameworks';
 import {
@@ -17,8 +25,10 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Home,
 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type { ControlListItem, CreateControlInput, UpdateControlInput, EnabledFramework } from '../types/controls';
 import { cn } from '../lib/utils';
 
@@ -168,18 +178,39 @@ export default function Controls() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <AppHeader />
+    <div className="flex">
+      <main className={cn(
+        "flex-1 transition-all duration-300",
+        selectedControl ? "mr-[420px]" : ""
+      )}>
+        <div className="container mx-auto px-4 py-6">
+            {/* Breadcrumb */}
+            <Breadcrumb className="mb-4">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/dashboard">
+                      <Home className="h-4 w-4" />
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Controls</BreadcrumbPage>
+                </BreadcrumbItem>
+                {selectedFramework && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{selectedFramework.name}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
 
-      {/* Main Content */}
-      <div className="flex pt-[57px]">
-        <main className={cn(
-          "flex-1 transition-all duration-300",
-          selectedControl ? "mr-[420px]" : ""
-        )}>
-          <div className="container mx-auto px-4 py-6">
             {/* Page Header */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Controls</h1>
                 <p className="text-muted-foreground mt-1">
@@ -191,6 +222,40 @@ export default function Controls() {
                 New Control
               </Button>
             </div>
+
+            {/* Status Tabs (Vanta-style) */}
+            <Tabs
+              value={filters.status || 'all'}
+              onValueChange={(value) => updateFilters({ status: value === 'all' ? undefined : value as any })}
+              className="mb-6"
+            >
+              <TabsList className="bg-transparent border-b rounded-none h-auto p-0 gap-4">
+                <TabsTrigger
+                  value="all"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3"
+                >
+                  All ({stats.total})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="implemented"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3"
+                >
+                  Implemented ({stats.implemented})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="in_progress"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3"
+                >
+                  In Progress ({stats.inProgress})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="not_started"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-1 pb-3"
+                >
+                  Not Started ({stats.notStarted})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {/* Framework Compliance Section */}
             <section className="mb-8">
@@ -341,29 +406,28 @@ export default function Controls() {
           </div>
         </main>
 
-        {/* Detail Panel - Slide in from right */}
-        {selectedControl && (
-          <>
-            {/* Backdrop overlay - click to close */}
-            <div
-              className="fixed inset-0 bg-black/20 z-20 top-[57px]"
-              onClick={handleCloseDetail}
+      {/* Detail Panel - Slide in from right */}
+      {selectedControl && (
+        <>
+          {/* Backdrop overlay - click to close */}
+          <div
+            className="fixed inset-0 bg-black/20 z-20"
+            onClick={handleCloseDetail}
+          />
+          <div className="fixed right-0 top-0 h-screen z-30 shadow-xl">
+            <ControlDetailPanel
+              control={controlDetail}
+              isLoading={isLoadingDetail}
+              onClose={handleCloseDetail}
+              onEdit={handleEdit}
+              onMappingChange={() => {
+                refetchControlDetail();
+                refetch();
+              }}
             />
-            <div className="fixed right-0 top-[57px] h-[calc(100vh-57px)] z-30 shadow-xl">
-              <ControlDetailPanel
-                control={controlDetail}
-                isLoading={isLoadingDetail}
-                onClose={handleCloseDetail}
-                onEdit={handleEdit}
-                onMappingChange={() => {
-                  refetchControlDetail();
-                  refetch();
-                }}
-              />
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Create/Edit Form Dialog */}
       <ControlForm
