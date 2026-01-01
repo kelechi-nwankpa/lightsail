@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser, useOrganization } from '@clerk/clerk-react';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import {
@@ -148,8 +149,14 @@ export default function Policies() {
       await submitForReview(policy.id);
       refetch();
       if (isDetailOpen) refetchPolicyDetail();
+      toast.success('Submitted for review', {
+        description: `"${policy.title}" has been submitted for review.`,
+      });
     } catch (err) {
       console.error('Failed to submit for review:', err);
+      toast.error('Failed to submit for review', {
+        description: 'Please try again later.',
+      });
     }
   };
 
@@ -158,8 +165,14 @@ export default function Policies() {
       await approvePolicy(policy.id);
       refetch();
       if (isDetailOpen) refetchPolicyDetail();
+      toast.success('Policy approved', {
+        description: `"${policy.title}" has been approved.`,
+      });
     } catch (err) {
       console.error('Failed to approve policy:', err);
+      toast.error('Failed to approve policy', {
+        description: 'Please try again later.',
+      });
     }
   };
 
@@ -171,8 +184,14 @@ export default function Policies() {
         setIsDetailOpen(false);
         setSelectedPolicy(null);
       }
+      toast.success('Policy archived', {
+        description: `"${policy.title}" has been archived.`,
+      });
     } catch (err) {
       console.error('Failed to archive policy:', err);
+      toast.error('Failed to archive policy', {
+        description: 'Please try again later.',
+      });
     }
   };
 
@@ -187,16 +206,27 @@ export default function Policies() {
         setIsDetailOpen(false);
         setSelectedPolicy(null);
       }
+      toast.success('Policy deleted', {
+        description: `"${policy.title}" has been deleted.`,
+      });
     } catch (err) {
       console.error('Failed to delete policy:', err);
+      toast.error('Failed to delete policy', {
+        description: 'Please try again later.',
+      });
     }
   };
 
-  const handleFormSuccess = () => {
+  const handleFormSuccess = (isEdit: boolean) => {
     refetch();
     if (selectedPolicy) {
       refetchPolicyDetail();
     }
+    toast.success(isEdit ? 'Policy updated' : 'Policy created', {
+      description: isEdit
+        ? 'Your changes have been saved.'
+        : 'The new policy has been created.',
+    });
   };
 
   if (!user || !organization) {

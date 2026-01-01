@@ -24,7 +24,7 @@ interface PolicyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   policy?: PolicyDetail | null; // If provided, we're editing
-  onSuccess: () => void;
+  onSuccess: (isEdit: boolean) => void;
 }
 
 export function PolicyFormDialog({
@@ -131,7 +131,7 @@ export function PolicyFormDialog({
       }
 
       onOpenChange(false);
-      onSuccess();
+      onSuccess(isEditing);
     } catch (err) {
       console.error('Failed to save policy:', err);
       setErrors({ submit: 'Failed to save policy. Please try again.' });

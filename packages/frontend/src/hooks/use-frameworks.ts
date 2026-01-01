@@ -142,5 +142,14 @@ export function useEnabledFrameworks() {
     }
   };
 
-  return { enabledFrameworks, isLoading, error, refetch: fetchEnabledFrameworks, enableFramework };
+  const disableFramework = async (frameworkId: string) => {
+    try {
+      await api.post('/frameworks/disable', { frameworkId });
+      await fetchEnabledFrameworks();
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to disable framework');
+    }
+  };
+
+  return { enabledFrameworks, isLoading, error, refetch: fetchEnabledFrameworks, enableFramework, disableFramework };
 }

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser, useOrganization } from '@clerk/clerk-react';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import {
@@ -143,13 +144,26 @@ export default function Controls() {
   };
 
   const handleSubmit = async (data: CreateControlInput | UpdateControlInput) => {
-    if (editingControl) {
-      await updateControl(editingControl.id, data as UpdateControlInput);
-    } else {
-      await createControl(data as CreateControlInput);
+    const isEditing = !!editingControl;
+    try {
+      if (isEditing) {
+        await updateControl(editingControl.id, data as UpdateControlInput);
+      } else {
+        await createControl(data as CreateControlInput);
+      }
+      refetch();
+      setEditingControl(undefined);
+      toast.success(isEditing ? 'Control updated' : 'Control created', {
+        description: isEditing
+          ? 'Your changes have been saved.'
+          : 'The new control has been created.',
+      });
+    } catch (err) {
+      console.error('Failed to save control:', err);
+      toast.error(isEditing ? 'Failed to update control' : 'Failed to create control', {
+        description: 'Please try again later.',
+      });
     }
-    refetch();
-    setEditingControl(undefined);
   };
 
   const handleFrameworkClick = (framework: EnabledFramework) => {

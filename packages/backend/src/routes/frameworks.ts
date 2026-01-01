@@ -85,6 +85,44 @@ router.post(
   }
 );
 
+// POST /frameworks/disable - Disable a framework for the organization
+router.post(
+  '/disable',
+  requireAuth,
+  requireOrganization(),
+  validate({
+    body: z.object({ frameworkId: z.string().uuid() }),
+  }),
+  async (req, res) => {
+    const { frameworkId } = req.body;
+    const organizationId = req.organizationId!;
+
+    // Check if framework is enabled
+    const orgFramework = await prisma.organizationFramework.findUnique({
+      where: {
+        organizationId_frameworkId: {
+          organizationId,
+          frameworkId,
+        },
+      },
+    });
+
+    if (!orgFramework) {
+      throw new NotFoundError('Framework is not enabled for this organization');
+    }
+
+    // Delete the organization-framework relationship
+    await prisma.organizationFramework.delete({
+      where: { id: orgFramework.id },
+    });
+
+    res.json({
+      success: true,
+      data: { message: 'Framework disabled successfully' },
+    });
+  }
+);
+
 // GET /frameworks/enabled - List organization's enabled frameworks with progress
 router.get('/enabled', requireAuth, requireOrganization(), async (req, res) => {
   const organizationId = req.organizationId!;

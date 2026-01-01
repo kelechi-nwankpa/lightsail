@@ -4,7 +4,9 @@ import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import ControlsPage from './pages/Controls';
 import PoliciesPage from './pages/Policies';
+import FrameworksPage from './pages/Frameworks';
 import { AppSidebarProvider, AppSidebar, useSidebar } from './components/layout/AppSidebar';
+import { Toaster } from './components/ui/sonner';
 import { cn } from './lib/utils';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -45,6 +47,7 @@ function AuthenticatedApp() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/controls" element={<ControlsPage />} />
           <Route path="/policies" element={<PoliciesPage />} />
+          <Route path="/frameworks" element={<FrameworksPage />} />
           {/* Redirect root to dashboard when authenticated */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {/* Catch all - redirect to dashboard */}
@@ -57,20 +60,23 @@ function AuthenticatedApp() {
 
 export function App() {
   return (
-    <Routes>
-      {/* Public landing page */}
-      <Route path="/" element={
-        <>
-          <SignedIn>
-            <Navigate to="/dashboard" replace />
-          </SignedIn>
-          <SignedOut>
-            <LandingPage />
-          </SignedOut>
-        </>
-      } />
-      {/* All other routes go through authenticated app */}
-      <Route path="/*" element={<AuthenticatedApp />} />
-    </Routes>
+    <>
+      <Routes>
+        {/* Public landing page */}
+        <Route path="/" element={
+          <>
+            <SignedIn>
+              <Navigate to="/dashboard" replace />
+            </SignedIn>
+            <SignedOut>
+              <LandingPage />
+            </SignedOut>
+          </>
+        } />
+        {/* All other routes go through authenticated app */}
+        <Route path="/*" element={<AuthenticatedApp />} />
+      </Routes>
+      <Toaster position="top-right" richColors closeButton />
+    </>
   );
 }
