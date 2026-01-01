@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/Dashboard';
 import ControlsPage from './pages/Controls';
 import PoliciesPage from './pages/Policies';
 import FrameworksPage from './pages/Frameworks';
+import EvidencePage from './pages/Evidence';
 import { AppSidebarProvider, AppSidebar, useSidebar } from './components/layout/AppSidebar';
 import { Toaster } from './components/ui/sonner';
 import { cn } from './lib/utils';
@@ -48,6 +49,7 @@ function AuthenticatedApp() {
           <Route path="/controls" element={<ControlsPage />} />
           <Route path="/policies" element={<PoliciesPage />} />
           <Route path="/frameworks" element={<FrameworksPage />} />
+          <Route path="/evidence" element={<EvidencePage />} />
           {/* Redirect root to dashboard when authenticated */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {/* Catch all - redirect to dashboard */}
