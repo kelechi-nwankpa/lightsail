@@ -106,6 +106,8 @@ router.get(
       validFrom: e.validFrom,
       validUntil: e.validUntil,
       reviewStatus: e.reviewStatus,
+      // Phase 0: Provisional tracking - manual uploads have lower confidence
+      isProvisional: e.isProvisional,
       createdAt: e.createdAt,
       updatedAt: e.updatedAt,
       controlCount: e.controlLinks.length,
@@ -197,6 +199,8 @@ router.get(
           : null,
         reviewNotes: evidence.reviewNotes,
         metadata: evidence.metadata,
+        // Phase 0: Provisional tracking - manual uploads have lower confidence
+        isProvisional: evidence.isProvisional,
         createdAt: evidence.createdAt,
         updatedAt: evidence.updatedAt,
         linkedControls: evidence.controlLinks.map((link) => ({
@@ -213,6 +217,9 @@ router.get(
   }
 );
 
+// Phase 0: Integration sources that generate verified (non-provisional) evidence
+const INTEGRATION_SOURCES = ['aws', 'github', 'gsuite', 'azure_ad', 'jira', 'slack'];
+
 // POST /evidence - Create evidence
 router.post(
   '/',
@@ -227,11 +234,16 @@ router.post(
       where: { clerkId: auth.userId! },
     });
 
+    // Phase 0: Determine if evidence is provisional based on source
+    // Manual uploads are provisional (lower confidence), integration-sourced evidence is not
+    const isProvisional = !INTEGRATION_SOURCES.includes(data.source);
+
     const evidence = await prisma.evidence.create({
       data: {
         ...data,
         organizationId,
         collectedById: user?.id,
+        isProvisional,
         controlLinks: controlIds?.length
           ? {
               create: controlIds.map((controlId) => ({
@@ -268,6 +280,8 @@ router.post(
         validFrom: evidence.validFrom,
         validUntil: evidence.validUntil,
         reviewStatus: evidence.reviewStatus,
+        // Phase 0: Include provisional status in response
+        isProvisional: evidence.isProvisional,
         createdAt: evidence.createdAt,
         linkedControls: evidence.controlLinks.map((link) => ({
           id: link.control.id,

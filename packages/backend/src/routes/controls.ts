@@ -2,7 +2,7 @@ import { Router, type IRouter } from 'express';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/db.js';
-import { requireAuth, requireOrganization, validate } from '../middleware/index.js';
+import { requireAuth, requireOrganization, validate, getAuth } from '../middleware/index.js';
 import { NotFoundError } from '../utils/errors.js';
 import {
   createControlSchema,
@@ -99,6 +99,10 @@ router.get(
       reviewFrequencyDays: c.reviewFrequencyDays,
       lastReviewedAt: c.lastReviewedAt,
       nextReviewAt: c.nextReviewAt,
+      // Phase 0: Verification status fields
+      verificationStatus: c.verificationStatus,
+      verifiedAt: c.verifiedAt,
+      verificationSource: c.verificationSource,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       evidenceCount: c._count.evidenceLinks,
@@ -289,6 +293,15 @@ router.patch(
   async (req, res) => {
     const { id } = req.params;
     const organizationId = req.organizationId!;
+    const auth = getAuth(req);
+    const body = req.body as z.infer<typeof updateControlSchema>;
+    const {
+      statusChangeJustification,
+      verificationStatus,
+      verificationSource,
+      verificationDetails,
+      ...updateData
+    } = body;
 
     // Check control exists
     const existing = await prisma.control.findFirst({
@@ -299,9 +312,69 @@ router.patch(
       throw new NotFoundError('Control not found');
     }
 
-    const control = await prisma.control.update({
-      where: { id },
-      data: req.body,
+    // Build update payload - use generic record to handle dynamic fields
+    const data: Record<string, unknown> = { ...updateData };
+
+    // Handle verification fields
+    if (verificationStatus !== undefined) {
+      data.verificationStatus = verificationStatus;
+      if (verificationStatus === 'verified') {
+        data.verifiedAt = new Date();
+      }
+    }
+    if (verificationSource !== undefined) {
+      data.verificationSource = verificationSource;
+    }
+    if (verificationDetails !== undefined) {
+      data.verificationDetails = verificationDetails;
+    }
+
+    // Track if implementation status is changing
+    const isStatusChange =
+      updateData.implementationStatus !== undefined &&
+      updateData.implementationStatus !== existing.implementationStatus;
+
+    // Use transaction if status is changing (to also create audit log)
+    const control = await prisma.$transaction(async (tx) => {
+      // If implementation status is changing, create audit log
+      if (isStatusChange) {
+        await tx.auditLog.create({
+          data: {
+            organizationId,
+            userId: auth.userId,
+            userEmail: null, // Will be populated by middleware if needed
+            action: 'control.status_change',
+            entityType: 'Control',
+            entityId: id,
+            changes: {
+              implementationStatus: {
+                old: existing.implementationStatus,
+                new: updateData.implementationStatus,
+              },
+              justification: statusChangeJustification,
+            },
+            metadata: {
+              controlCode: existing.code,
+              controlName: existing.name,
+            },
+          },
+        });
+
+        // If manually changing status to 'implemented' without integration verification,
+        // set verificationStatus to 'unverified' to flag it needs validation
+        if (
+          updateData.implementationStatus === 'implemented' &&
+          !verificationStatus &&
+          existing.verificationStatus !== 'verified'
+        ) {
+          data.verificationStatus = 'unverified';
+        }
+      }
+
+      return tx.control.update({
+        where: { id },
+        data: data as Prisma.ControlUpdateInput,
+      });
     });
 
     res.json({
@@ -316,6 +389,10 @@ router.patch(
         ownerId: control.ownerId,
         riskLevel: control.riskLevel,
         reviewFrequencyDays: control.reviewFrequencyDays,
+        // Phase 0: Include verification fields in response
+        verificationStatus: control.verificationStatus,
+        verifiedAt: control.verifiedAt,
+        verificationSource: control.verificationSource,
         updatedAt: control.updatedAt,
       },
     });

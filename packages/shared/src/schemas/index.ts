@@ -61,16 +61,37 @@ export const createControlSchema = z.object({
   frameworkRequirementIds: z.array(z.string().uuid()).optional(),
 });
 
+// Verification status for controls (Phase 0: Security-First Foundation)
+export const verificationStatusSchema = z.enum(['unverified', 'verified', 'failed', 'stale']);
+
 export const updateControlSchema = z.object({
   code: z.string().max(100).optional(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   implementationStatus: controlStatusSchema.optional(),
   implementationNotes: z.string().optional(),
+  // Phase 0: Require justification when changing implementation status
+  statusChangeJustification: z.string().min(10).max(1000).optional(),
   ownerId: z.string().uuid().nullable().optional(),
   riskLevel: riskLevelSchema.nullable().optional(),
   reviewFrequencyDays: z.number().int().positive().optional(),
-});
+  // Phase 0: Verification fields (typically set by integrations, not manually)
+  verificationStatus: verificationStatusSchema.optional(),
+  verificationSource: z.string().max(100).optional(),
+  verificationDetails: z.record(z.unknown()).optional(),
+}).refine(
+  (data) => {
+    // If implementationStatus is being changed, statusChangeJustification is required
+    if (data.implementationStatus !== undefined && !data.statusChangeJustification) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Status change justification is required when updating implementation status',
+    path: ['statusChangeJustification'],
+  }
+);
 
 export const controlFiltersSchema = z.object({
   status: controlStatusSchema.optional(),

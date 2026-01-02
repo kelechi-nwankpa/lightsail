@@ -197,21 +197,30 @@ model Control {
   nextReviewAt         DateTime?
   reviewFrequencyDays  Int       @default(90)
 
+  // Verification tracking (Phase 0: Security-First Foundation)
+  // Values: "unverified", "verified", "failed", "stale"
+  verificationStatus   String    @default("unverified") @db.VarChar(50)
+  verifiedAt           DateTime?
+  verificationSource   String?   @db.VarChar(100) // e.g., "aws-iam", "google-workspace", "manual"
+  verificationDetails  Json      @default("{}")
+
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   deletedAt            DateTime?
 
   // Relations
-  organization      Organization              @relation(fields: [organizationId], references: [id])
-  owner             User?                     @relation("ControlOwner", fields: [ownerId], references: [id])
-  frameworkMappings ControlFrameworkMapping[]
-  evidenceLinks     EvidenceControlLink[]
-  policyLinks       PolicyControlLink[]
-  riskLinks         RiskControlLink[]
-  tasks             Task[]
+  organization       Organization              @relation(fields: [organizationId], references: [id])
+  owner              User?                     @relation("ControlOwner", fields: [ownerId], references: [id])
+  frameworkMappings  ControlFrameworkMapping[]
+  evidenceLinks      EvidenceControlLink[]
+  policyLinks        PolicyControlLink[]
+  riskLinks          RiskControlLink[]
+  tasks              Task[]
+  effectivenessLogs  ControlEffectivenessLog[]
 
   @@index([organizationId])
   @@index([organizationId, implementationStatus])
+  @@index([organizationId, verificationStatus])
   @@index([ownerId])
 }
 
@@ -258,6 +267,10 @@ model Evidence {
   reviewedAt     DateTime?
   reviewNotes    String?
   metadata       Json      @default("{}")
+
+  // Provisional tracking (Phase 0: Security-First Foundation)
+  // true = manual upload (lower confidence), false = integration-generated (verified)
+  isProvisional  Boolean   @default(true)
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -584,4 +597,40 @@ model ComplianceScore {
 
   @@unique([organizationId, frameworkId])
   @@index([organizationId])
+}
+
+// ============================================
+// Control Effectiveness Tracking (Phase 0)
+// ============================================
+
+model ControlEffectivenessLog {
+  id                 String   @id @default(uuid())
+  controlId          String
+
+  // Effectiveness score (0-100)
+  effectivenessScore Decimal  @db.Decimal(5, 2)
+
+  // Score breakdown factors
+  factors            Json     @default("{}")
+  // Expected structure:
+  // {
+  //   verificationScore: number (0-40),
+  //   freshnessScore: number (0-25),
+  //   coverageScore: number (0-20),
+  //   reviewScore: number (0-15),
+  //   verificationStatus: string,
+  //   daysSinceLastEvidence: number,
+  //   daysSinceLastReview: number
+  // }
+
+  // What triggered this calculation
+  triggeredBy        String?  @db.VarChar(100) // e.g., "evidence_added", "verification_run", "scheduled"
+
+  calculatedAt       DateTime @default(now())
+
+  // Relations
+  control            Control  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@index([controlId])
+  @@index([controlId, calculatedAt])
 }

@@ -79,6 +79,11 @@ export interface Control {
   lastReviewedAt: Date | null;
   nextReviewAt: Date | null;
   reviewFrequencyDays: number;
+  // Verification tracking (Phase 0: Security-First Foundation)
+  verificationStatus: VerificationStatus;
+  verifiedAt: Date | null;
+  verificationSource: string | null;
+  verificationDetails: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -114,6 +119,9 @@ export interface Evidence {
   reviewedAt: Date | null;
   reviewNotes: string | null;
   metadata: Record<string, unknown>;
+  // Provisional tracking (Phase 0: Security-First Foundation)
+  // true = manual upload (lower confidence), false = integration-generated (verified)
+  isProvisional: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -235,6 +243,17 @@ export interface AuditLog {
   createdAt: Date;
 }
 
+// Control Effectiveness Log (Phase 0: Security-First Foundation)
+// Tracks effectiveness scores over time for audit trail
+export interface ControlEffectivenessLog {
+  id: string;
+  controlId: string;
+  effectivenessScore: number; // 0-100 percentage
+  factors: Record<string, unknown>; // What contributed to this score
+  triggeredBy: string | null; // What event triggered the calculation (e.g., "integration-sync", "manual-review")
+  calculatedAt: Date;
+}
+
 // ============================================
 // Enums
 // ============================================
@@ -246,6 +265,13 @@ export type MemberRole = 'owner' | 'admin' | 'member' | 'viewer';
 export type FrameworkCode = 'SOC2' | 'ISO27001' | 'GDPR' | 'NDPR';
 
 export type ControlStatus = 'not_started' | 'in_progress' | 'implemented' | 'not_applicable';
+
+// Verification status (Phase 0: Security-First Foundation)
+// - unverified: No integration verification, self-attested only
+// - verified: Confirmed by integration/telemetry
+// - failed: Verification attempted but conditions not met
+// - stale: Previously verified but evidence has expired
+export type VerificationStatus = 'unverified' | 'verified' | 'failed' | 'stale';
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 

@@ -39,6 +39,47 @@ function calculateRiskScore(likelihood: string, impact: string): number {
   return (LIKELIHOOD_SCORES[likelihood] || 3) * (IMPACT_SCORES[impact] || 3);
 }
 
+// Phase 0: Calculate residual score based on linked controls and their effectiveness
+// Effective controls reduce risk by 30%, partial by 15%, ineffective by 0%
+const EFFECTIVENESS_REDUCTION: Record<string, number> = {
+  effective: 0.30,
+  partial: 0.15,
+  ineffective: 0.00,
+};
+
+function calculateResidualScore(
+  inherentScore: number,
+  controlLinks: Array<{ effectiveness: string; control: { implementationStatus: string } }>
+): number {
+  if (controlLinks.length === 0) {
+    // No controls = residual equals inherent
+    return inherentScore;
+  }
+
+  // Only count implemented controls
+  const implementedLinks = controlLinks.filter(
+    (link) => link.control.implementationStatus === 'implemented'
+  );
+
+  if (implementedLinks.length === 0) {
+    return inherentScore;
+  }
+
+  // Calculate total reduction (capped at 80% max reduction)
+  let totalReduction = 0;
+  for (const link of implementedLinks) {
+    totalReduction += EFFECTIVENESS_REDUCTION[link.effectiveness] || 0;
+  }
+
+  // Cap the reduction at 80% - some residual risk always remains
+  const cappedReduction = Math.min(totalReduction, 0.80);
+
+  // Calculate residual score (minimum of 1)
+  const residual = Math.max(1, Math.round(inherentScore * (1 - cappedReduction)));
+
+  return residual;
+}
+
 // GET /risks - List risks with filters & pagination
 router.get(
   '/',
@@ -227,11 +268,30 @@ router.post(
     // Calculate inherent risk score
     const inherentScore = calculateRiskScore(data.likelihood, data.impact);
 
+    // If controls are being linked, fetch their implementation status for residual calculation
+    let controlsForResidual: Array<{ effectiveness: string; control: { implementationStatus: string } }> = [];
+    if (controlIds?.length) {
+      const controls = await prisma.control.findMany({
+        where: { id: { in: controlIds }, organizationId, deletedAt: null },
+        select: { id: true, implementationStatus: true },
+      });
+      controlsForResidual = controlIds.map((controlId) => ({
+        effectiveness: 'partial', // Default effectiveness for new links
+        control: {
+          implementationStatus: controls.find((c) => c.id === controlId)?.implementationStatus || 'not_started',
+        },
+      }));
+    }
+
+    // Phase 0: Auto-calculate residual score based on linked controls
+    const residualScore = calculateResidualScore(inherentScore, controlsForResidual);
+
     const risk = await prisma.risk.create({
       data: {
         ...data,
         organizationId,
         inherentScore,
+        residualScore,
         controlLinks: controlIds?.length
           ? {
               create: controlIds.map((controlId) => ({
@@ -290,9 +350,16 @@ router.patch(
     const organizationId = req.organizationId!;
     const { controlIds, ...data } = req.body as z.infer<typeof updateRiskSchema>;
 
-    // Check risk exists
+    // Check risk exists with current control links
     const existing = await prisma.risk.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: {
+        controlLinks: {
+          include: {
+            control: { select: { id: true, implementationStatus: true } },
+          },
+        },
+      },
     });
 
     if (!existing) {
@@ -306,6 +373,9 @@ router.patch(
 
     // Update risk and optionally replace control links
     const risk = await prisma.$transaction(async (tx) => {
+      // Determine control links for residual calculation
+      let controlLinksForResidual: Array<{ effectiveness: string; control: { implementationStatus: string } }>;
+
       // If controlIds provided, replace all links
       if (controlIds !== undefined) {
         await tx.riskControlLink.deleteMany({
@@ -313,6 +383,12 @@ router.patch(
         });
 
         if (controlIds.length > 0) {
+          // Fetch the implementation status of the new controls
+          const controls = await tx.control.findMany({
+            where: { id: { in: controlIds }, organizationId, deletedAt: null },
+            select: { id: true, implementationStatus: true },
+          });
+
           await tx.riskControlLink.createMany({
             data: controlIds.map((controlId) => ({
               riskId: id,
@@ -320,14 +396,33 @@ router.patch(
               effectiveness: 'partial',
             })),
           });
+
+          controlLinksForResidual = controlIds.map((controlId) => ({
+            effectiveness: 'partial',
+            control: {
+              implementationStatus: controls.find((c) => c.id === controlId)?.implementationStatus || 'not_started',
+            },
+          }));
+        } else {
+          controlLinksForResidual = [];
         }
+      } else {
+        // Use existing control links
+        controlLinksForResidual = existing.controlLinks.map((link) => ({
+          effectiveness: link.effectiveness,
+          control: { implementationStatus: link.control.implementationStatus },
+        }));
       }
+
+      // Phase 0: Auto-calculate residual score based on linked controls
+      const residualScore = calculateResidualScore(inherentScore, controlLinksForResidual);
 
       return tx.risk.update({
         where: { id },
         data: {
           ...data,
           inherentScore,
+          residualScore,
         },
         include: {
           owner: {
@@ -412,9 +507,16 @@ router.post(
     };
     const organizationId = req.organizationId!;
 
-    // Verify risk exists
+    // Verify risk exists with current control links
     const risk = await prisma.risk.findFirst({
       where: { id: riskId, organizationId, deletedAt: null },
+      include: {
+        controlLinks: {
+          include: {
+            control: { select: { id: true, implementationStatus: true } },
+          },
+        },
+      },
     });
 
     if (!risk) {
@@ -430,36 +532,61 @@ router.post(
       throw new NotFoundError('Control not found');
     }
 
-    // Create link (upsert to handle duplicates)
-    const link = await prisma.riskControlLink.upsert({
-      where: {
-        riskId_controlId: {
+    // Create link and recalculate residual score
+    const result = await prisma.$transaction(async (tx) => {
+      // Create link (upsert to handle duplicates)
+      const link = await tx.riskControlLink.upsert({
+        where: {
+          riskId_controlId: {
+            riskId,
+            controlId,
+          },
+        },
+        update: { effectiveness, notes },
+        create: {
           riskId,
           controlId,
+          effectiveness,
+          notes,
         },
-      },
-      update: { effectiveness, notes },
-      create: {
-        riskId,
-        controlId,
-        effectiveness,
-        notes,
-      },
-      include: {
-        control: { select: { id: true, code: true, name: true } },
-      },
+        include: {
+          control: { select: { id: true, code: true, name: true, implementationStatus: true } },
+        },
+      });
+
+      // Phase 0: Recalculate residual score with the new/updated link
+      const existingLinks = risk.controlLinks.filter((l) => l.controlId !== controlId);
+      const allLinks = [
+        ...existingLinks.map((l) => ({
+          effectiveness: l.effectiveness,
+          control: { implementationStatus: l.control.implementationStatus },
+        })),
+        {
+          effectiveness,
+          control: { implementationStatus: control.implementationStatus },
+        },
+      ];
+
+      const residualScore = calculateResidualScore(risk.inherentScore || 9, allLinks);
+
+      await tx.risk.update({
+        where: { id: riskId },
+        data: { residualScore },
+      });
+
+      return link;
     });
 
     res.status(201).json({
       success: true,
       data: {
-        id: link.id,
-        riskId: link.riskId,
-        controlId: link.controlId,
-        controlCode: link.control.code,
-        controlName: link.control.name,
-        effectiveness: link.effectiveness,
-        notes: link.notes,
+        id: result.id,
+        riskId: result.riskId,
+        controlId: result.controlId,
+        controlCode: result.control.code,
+        controlName: result.control.name,
+        effectiveness: result.effectiveness,
+        notes: result.notes,
       },
     });
   }
@@ -479,9 +606,16 @@ router.delete(
     const controlId = req.params.controlId!;
     const organizationId = req.organizationId!;
 
-    // Verify risk exists
+    // Verify risk exists with control links
     const risk = await prisma.risk.findFirst({
       where: { id: riskId, organizationId, deletedAt: null },
+      include: {
+        controlLinks: {
+          include: {
+            control: { select: { id: true, implementationStatus: true } },
+          },
+        },
+      },
     });
 
     if (!risk) {
@@ -502,8 +636,26 @@ router.delete(
       throw new NotFoundError('Link not found');
     }
 
-    await prisma.riskControlLink.delete({
-      where: { id: link.id },
+    // Delete link and recalculate residual score
+    await prisma.$transaction(async (tx) => {
+      await tx.riskControlLink.delete({
+        where: { id: link.id },
+      });
+
+      // Phase 0: Recalculate residual score without the removed link
+      const remainingLinks = risk.controlLinks
+        .filter((l) => l.controlId !== controlId)
+        .map((l) => ({
+          effectiveness: l.effectiveness,
+          control: { implementationStatus: l.control.implementationStatus },
+        }));
+
+      const residualScore = calculateResidualScore(risk.inherentScore || 9, remainingLinks);
+
+      await tx.risk.update({
+        where: { id: riskId },
+        data: { residualScore },
+      });
     });
 
     res.json({ success: true, message: 'Control unlinked from risk' });
