@@ -34,7 +34,8 @@ export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableP
               <TableHead>Status</TableHead>
               <TableHead>Likelihood</TableHead>
               <TableHead>Impact</TableHead>
-              <TableHead>Score</TableHead>
+              <TableHead>Inherent</TableHead>
+              <TableHead>Residual</TableHead>
               <TableHead>Controls</TableHead>
               <TableHead>Created</TableHead>
             </TableRow>
@@ -47,6 +48,7 @@ export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableP
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-8" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -79,7 +81,8 @@ export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableP
             <TableHead>Status</TableHead>
             <TableHead>Likelihood</TableHead>
             <TableHead>Impact</TableHead>
-            <TableHead>Score</TableHead>
+            <TableHead>Inherent</TableHead>
+            <TableHead>Residual</TableHead>
             <TableHead>Controls</TableHead>
             <TableHead>Created</TableHead>
           </TableRow>
@@ -122,6 +125,9 @@ export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableP
               </TableCell>
               <TableCell>
                 <RiskScoreBadge score={risk.inherentScore} />
+              </TableCell>
+              <TableCell>
+                <RiskScoreBadge score={risk.residualScore} />
               </TableCell>
               <TableCell>
                 <span className="text-sm text-muted-foreground">

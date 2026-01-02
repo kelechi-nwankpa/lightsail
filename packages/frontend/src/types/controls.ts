@@ -1,4 +1,4 @@
-import type { ControlStatus, RiskLevel, CoverageLevel } from '@lightsail/shared';
+import type { ControlStatus, RiskLevel, CoverageLevel, VerificationStatus } from '@lightsail/shared';
 
 export interface FrameworkMapping {
   id: string;
@@ -25,6 +25,10 @@ export interface ControlListItem {
   reviewFrequencyDays: number;
   lastReviewedAt: string | null;
   nextReviewAt: string | null;
+  // Phase 0: Verification status tracking
+  verificationStatus: VerificationStatus;
+  verifiedAt: string | null;
+  verificationSource: string | null;
   createdAt: string;
   updatedAt: string;
   evidenceCount: number;
@@ -123,7 +127,13 @@ export interface UpdateControlInput {
   description?: string;
   implementationStatus?: ControlStatus;
   implementationNotes?: string;
+  // Required when changing implementationStatus (Phase 0)
+  statusChangeJustification?: string;
   ownerId?: string | null;
   riskLevel?: RiskLevel | null;
   reviewFrequencyDays?: number;
+  // Phase 0: Verification fields
+  verificationStatus?: VerificationStatus;
+  verificationSource?: string;
+  verificationDetails?: Record<string, unknown>;
 }

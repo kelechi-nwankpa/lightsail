@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
 import { Progress } from '../ui/progress';
 import { ControlStatusBadge } from './ControlStatusBadge';
+import { VerificationStatusBadge } from './VerificationStatusBadge';
 import { FrameworkMappingDialog } from '../frameworks/FrameworkMappingDialog';
 import { useControlMutations } from '../../hooks/use-controls';
 import {
@@ -18,7 +19,8 @@ import {
   Clock,
   ExternalLink,
   Plus,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import type { ControlDetail } from '../../types/controls';
 import { cn } from '../../lib/utils';
@@ -150,8 +152,9 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
                 <p className="text-xs font-mono text-muted-foreground mb-1">{control.code}</p>
               )}
               <h3 className="text-xl font-semibold mb-3">{control.name}</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <ControlStatusBadge status={control.implementationStatus} />
+                <VerificationStatusBadge status={control.verificationStatus} showIcon />
                 {control.riskLevel && (
                   <Badge
                     variant="outline"
@@ -269,6 +272,23 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
                       : "Not scheduled"
                   }
                 />
+                <MetadataItem
+                  icon={ShieldCheck}
+                  label="Verification Source"
+                  value={control.verificationSource || "Not verified by integration"}
+                  valueClassName={!control.verificationSource ? "text-muted-foreground italic" : ""}
+                />
+                {control.verifiedAt && (
+                  <MetadataItem
+                    icon={CheckCircle2}
+                    label="Last Verified"
+                    value={new Date(control.verifiedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  />
+                )}
               </div>
             </DetailSection>
 

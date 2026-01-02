@@ -28,6 +28,8 @@ import {
   FileText,
   ChevronRight,
   Home,
+  ShieldCheck,
+  ShieldQuestion,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type { ControlListItem, CreateControlInput, UpdateControlInput, EnabledFramework } from '../types/controls';
@@ -113,13 +115,25 @@ export default function Controls() {
     const notStarted = controls.filter(c => c.implementationStatus === 'not_started').length;
     const needsEvidence = controls.filter(c => c.evidenceCount === 0 && c.implementationStatus !== 'not_applicable').length;
 
+    // Phase 0: Verification status tracking
+    const verified = controls.filter(c => c.verificationStatus === 'verified').length;
+    const unverified = controls.filter(c => c.verificationStatus === 'unverified').length;
+    const verificationFailed = controls.filter(c => c.verificationStatus === 'failed').length;
+    const stale = controls.filter(c => c.verificationStatus === 'stale').length;
+
     return {
       total: controls.length,
       implemented,
       inProgress,
       notStarted,
       needsEvidence,
-      completionRate: controls.length > 0 ? Math.round((implemented / controls.length) * 100) : 0
+      completionRate: controls.length > 0 ? Math.round((implemented / controls.length) * 100) : 0,
+      // Phase 0: Verification stats
+      verified,
+      unverified,
+      verificationFailed,
+      stale,
+      verificationRate: controls.length > 0 ? Math.round((verified / controls.length) * 100) : 0
     };
   }, [controls]);
 
@@ -300,7 +314,7 @@ export default function Controls() {
 
             {/* Summary Cards - Vanta-style monitoring */}
             <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Overview</h2>
+              <h2 className="text-lg font-semibold mb-4">Implementation Status</h2>
               <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
                   icon={CheckCircle2}
@@ -333,6 +347,44 @@ export default function Controls() {
                   subtext="Controls without evidence"
                   variant={stats.needsEvidence > 0 ? "danger" : "success"}
                   onClick={handleFilterNeedsEvidence}
+                />
+              </div>
+            </section>
+
+            {/* Phase 0: Verification Status Section */}
+            <section className="mb-8">
+              <h2 className="text-lg font-semibold mb-4">Verification Status</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Controls verified by integrations have higher confidence than self-attested controls.
+              </p>
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <SummaryCard
+                  icon={ShieldCheck}
+                  label="Verified"
+                  value={stats.verified}
+                  subtext={`${stats.verificationRate}% verified by integrations`}
+                  variant="success"
+                />
+                <SummaryCard
+                  icon={ShieldQuestion}
+                  label="Unverified"
+                  value={stats.unverified}
+                  subtext="Self-attested, needs verification"
+                  variant={stats.unverified > 0 ? "warning" : "default"}
+                />
+                <SummaryCard
+                  icon={AlertCircle}
+                  label="Failed"
+                  value={stats.verificationFailed}
+                  subtext="Verification checks failed"
+                  variant={stats.verificationFailed > 0 ? "danger" : "default"}
+                />
+                <SummaryCard
+                  icon={Clock}
+                  label="Stale"
+                  value={stats.stale}
+                  subtext="Evidence has expired"
+                  variant={stats.stale > 0 ? "warning" : "default"}
                 />
               </div>
             </section>

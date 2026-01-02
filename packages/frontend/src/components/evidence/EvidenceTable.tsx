@@ -10,6 +10,7 @@ import {
 } from '../ui/table';
 import { EvidenceTypeBadge } from './EvidenceTypeBadge';
 import { EvidenceStatusBadge } from './EvidenceStatusBadge';
+import { ProvisionalBadge } from './ProvisionalBadge';
 import { cn } from '../../lib/utils';
 import type { EvidenceListItem } from '../../types/evidence';
 import type { EvidenceType, ReviewStatus } from '@lightsail/shared';
@@ -48,6 +49,7 @@ export function EvidenceTable({ evidence, isLoading, onSelect, selectedId }: Evi
               <TableHead className="w-[300px]">Evidence</TableHead>
               <TableHead className="w-[100px]">Type</TableHead>
               <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[100px]">Source</TableHead>
               <TableHead>Controls</TableHead>
               <TableHead className="w-[100px]">Size</TableHead>
               <TableHead className="w-[140px]">Collected</TableHead>
@@ -61,6 +63,9 @@ export function EvidenceTable({ evidence, isLoading, onSelect, selectedId }: Evi
                 </TableCell>
                 <TableCell>
                   <div className="h-5 bg-muted rounded animate-pulse w-20" />
+                </TableCell>
+                <TableCell>
+                  <div className="h-5 bg-muted rounded animate-pulse w-16" />
                 </TableCell>
                 <TableCell>
                   <div className="h-5 bg-muted rounded animate-pulse w-16" />
@@ -102,6 +107,7 @@ export function EvidenceTable({ evidence, isLoading, onSelect, selectedId }: Evi
             <TableHead className="w-[300px]">Evidence</TableHead>
             <TableHead className="w-[100px]">Type</TableHead>
             <TableHead className="w-[120px]">Status</TableHead>
+            <TableHead className="w-[100px]">Source</TableHead>
             <TableHead>Controls</TableHead>
             <TableHead className="w-[100px]">Size</TableHead>
             <TableHead className="w-[140px]">Collected</TableHead>
@@ -147,6 +153,9 @@ export function EvidenceTable({ evidence, isLoading, onSelect, selectedId }: Evi
                 </TableCell>
                 <TableCell>
                   <EvidenceStatusBadge status={item.reviewStatus as ReviewStatus} />
+                </TableCell>
+                <TableCell>
+                  <ProvisionalBadge isProvisional={item.isProvisional} size="sm" />
                 </TableCell>
                 <TableCell>
                   {item.controlCount > 0 ? (

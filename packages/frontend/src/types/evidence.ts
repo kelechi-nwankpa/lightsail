@@ -45,6 +45,8 @@ export interface EvidenceListItem {
   validFrom: string | null;
   validUntil: string | null;
   reviewStatus: ReviewStatus;
+  // Phase 0: Provisional tracking - manual uploads vs integration-sourced
+  isProvisional: boolean;
   createdAt: string;
   updatedAt: string;
   controlCount: number;
