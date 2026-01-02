@@ -6,6 +6,7 @@ import { controlsRouter } from './controls.js';
 import { policiesRouter } from './policies.js';
 import { evidenceRouter } from './evidence.js';
 import { uploadRouter } from './upload.js';
+import { risksRouter } from './risks.js';
 
 const router: IRouter = Router();
 
@@ -29,6 +30,9 @@ router.use('/evidence', evidenceRouter);
 
 // Upload routes (protected)
 router.use('/upload', uploadRouter);
+
+// Risks routes (protected)
+router.use('/risks', risksRouter);
 
 // TODO: Add more route modules as features are built
 // router.use('/organizations', organizationsRouter);

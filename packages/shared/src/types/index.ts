@@ -150,6 +150,37 @@ export interface PolicyVersion {
   createdAt: Date;
 }
 
+// Risks
+export interface Risk {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string | null;
+  category: RiskCategory;
+  status: RiskStatus;
+  likelihood: RiskLikelihood;
+  impact: RiskImpact;
+  inherentScore: number | null;
+  residualScore: number | null;
+  ownerId: string | null;
+  mitigationPlan: string | null;
+  acceptanceNotes: string | null;
+  dueDate: Date | null;
+  reviewedAt: Date | null;
+  nextReviewAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RiskControlLink {
+  id: string;
+  riskId: string;
+  controlId: string;
+  effectiveness: ControlEffectiveness;
+  notes: string | null;
+  createdAt: Date;
+}
+
 // Integrations
 export interface Integration {
   id: string;
@@ -235,6 +266,16 @@ export type TaskType = 'general' | 'remediation' | 'review' | 'implementation';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
+
+export type RiskCategory = 'operational' | 'technical' | 'compliance' | 'financial' | 'reputational' | 'strategic';
+
+export type RiskStatus = 'identified' | 'assessing' | 'mitigating' | 'monitoring' | 'accepted' | 'transferred' | 'closed';
+
+export type RiskLikelihood = 'rare' | 'unlikely' | 'possible' | 'likely' | 'almost_certain';
+
+export type RiskImpact = 'insignificant' | 'minor' | 'moderate' | 'major' | 'severe';
+
+export type ControlEffectiveness = 'effective' | 'partial' | 'ineffective';
 
 // ============================================
 // API Types

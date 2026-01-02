@@ -194,6 +194,55 @@ export const taskFiltersSchema = z.object({
 }).merge(paginationSchema);
 
 // ============================================
+// Risk Schemas
+// ============================================
+
+export const riskCategorySchema = z.enum(['operational', 'technical', 'compliance', 'financial', 'reputational', 'strategic']);
+
+export const riskStatusSchema = z.enum(['identified', 'assessing', 'mitigating', 'monitoring', 'accepted', 'transferred', 'closed']);
+
+export const riskLikelihoodSchema = z.enum(['rare', 'unlikely', 'possible', 'likely', 'almost_certain']);
+
+export const riskImpactSchema = z.enum(['insignificant', 'minor', 'moderate', 'major', 'severe']);
+
+export const controlEffectivenessSchema = z.enum(['effective', 'partial', 'ineffective']);
+
+export const createRiskSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  category: riskCategorySchema.default('operational'),
+  likelihood: riskLikelihoodSchema.default('possible'),
+  impact: riskImpactSchema.default('moderate'),
+  ownerId: z.string().uuid().optional(),
+  mitigationPlan: z.string().optional(),
+  dueDate: z.coerce.date().optional(),
+  controlIds: z.array(z.string().uuid()).optional(),
+});
+
+export const updateRiskSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  category: riskCategorySchema.optional(),
+  status: riskStatusSchema.optional(),
+  likelihood: riskLikelihoodSchema.optional(),
+  impact: riskImpactSchema.optional(),
+  ownerId: z.string().uuid().nullable().optional(),
+  mitigationPlan: z.string().optional(),
+  acceptanceNotes: z.string().optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  controlIds: z.array(z.string().uuid()).optional(),
+});
+
+export const riskFiltersSchema = z.object({
+  status: riskStatusSchema.optional(),
+  category: riskCategorySchema.optional(),
+  likelihood: riskLikelihoodSchema.optional(),
+  impact: riskImpactSchema.optional(),
+  ownerId: z.string().uuid().optional(),
+  search: z.string().optional(),
+}).merge(paginationSchema);
+
+// ============================================
 // Integration Schemas
 // ============================================
 
@@ -234,4 +283,7 @@ export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type TaskFilters = z.infer<typeof taskFiltersSchema>;
 export type ConnectIntegrationInput = z.infer<typeof connectIntegrationSchema>;
 export type UpdateIntegrationInput = z.infer<typeof updateIntegrationSchema>;
+export type CreateRiskInput = z.infer<typeof createRiskSchema>;
+export type UpdateRiskInput = z.infer<typeof updateRiskSchema>;
+export type RiskFilters = z.infer<typeof riskFiltersSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
