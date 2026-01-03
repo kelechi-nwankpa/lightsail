@@ -5,6 +5,7 @@ import { requireAuth, requireOrganization, validate, getAuth } from '../middlewa
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { credentialVault } from '../services/credential-vault.js';
 import { syncRunner } from '../integrations/engine/sync-runner.js';
+import { syncScheduler } from '../integrations/engine/sync-scheduler.js';
 import { connectIntegrationSchema, updateIntegrationSchema } from '@lightsail/shared';
 
 const router: IRouter = Router();
@@ -403,6 +404,16 @@ router.get(
   }
 );
 
+// GET /integrations/scheduler/status - Get scheduler status
+router.get('/scheduler/status', async (_req, res) => {
+  const status = await syncScheduler.getStatus();
+
+  res.json({
+    success: true,
+    data: status,
+  });
+});
+
 // GET /integrations/types - Get available integration types
 router.get('/types', (_req, res) => {
   // Return static list of supported integration types with metadata
@@ -421,14 +432,14 @@ router.get('/types', (_req, res) => {
         displayName: 'Amazon Web Services',
         description: 'IAM, CloudTrail, S3 encryption, and security configuration',
         icon: 'aws',
-        available: false, // Coming soon
+        available: true,
       },
       {
         type: 'gsuite',
         displayName: 'Google Workspace',
         description: 'User directory, MFA status, and security settings',
         icon: 'google',
-        available: false, // Coming soon
+        available: true,
       },
       {
         type: 'azure_ad',

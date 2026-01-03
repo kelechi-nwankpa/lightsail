@@ -33,8 +33,8 @@ interface IntegrationOption {
 
 const INTEGRATION_OPTIONS: IntegrationOption[] = [
   { type: 'github', icon: Github, available: true },
-  { type: 'aws', icon: Cloud, available: false },
-  { type: 'gsuite', icon: Mail, available: false },
+  { type: 'aws', icon: Cloud, available: true },
+  { type: 'gsuite', icon: Mail, available: true },
   { type: 'azure_ad', icon: Users, available: false },
   { type: 'jira', icon: ClipboardList, available: false },
   { type: 'slack', icon: MessageSquare, available: false },
@@ -62,8 +62,46 @@ const CREDENTIAL_FIELDS: Record<IntegrationType, Array<{
       },
     },
   ],
-  aws: [],
-  gsuite: [],
+  aws: [
+    {
+      key: 'accessKeyId',
+      label: 'Access Key ID',
+      type: 'text',
+      placeholder: 'AKIAIOSFODNN7EXAMPLE',
+      helpText: 'AWS Access Key ID with SecurityAudit permissions.',
+      helpLink: {
+        text: 'Create IAM User',
+        url: 'https://console.aws.amazon.com/iam/home#/users$new?step=details',
+      },
+    },
+    {
+      key: 'secretAccessKey',
+      label: 'Secret Access Key',
+      type: 'password',
+      placeholder: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+      helpText: 'AWS Secret Access Key for the IAM user.',
+    },
+  ],
+  gsuite: [
+    {
+      key: 'serviceAccountJson',
+      label: 'Service Account JSON',
+      type: 'password',
+      placeholder: '{"type": "service_account", ...}',
+      helpText: 'Service account key JSON with domain-wide delegation enabled.',
+      helpLink: {
+        text: 'Create Service Account',
+        url: 'https://console.cloud.google.com/iam-admin/serviceaccounts/create',
+      },
+    },
+    {
+      key: 'adminEmail',
+      label: 'Admin Email',
+      type: 'text',
+      placeholder: 'admin@company.com',
+      helpText: 'Email of a super admin to impersonate for API calls.',
+    },
+  ],
   azure_ad: [],
   jira: [],
   slack: [],
@@ -87,8 +125,25 @@ const CONFIG_FIELDS: Record<IntegrationType, Array<{
       helpText: 'Leave blank to sync all accessible repositories.',
     },
   ],
-  aws: [],
-  gsuite: [],
+  aws: [
+    {
+      key: 'region',
+      label: 'AWS Region',
+      type: 'text',
+      placeholder: 'us-east-1',
+      helpText: 'Primary AWS region for API calls.',
+      defaultValue: 'us-east-1',
+    },
+  ],
+  gsuite: [
+    {
+      key: 'domain',
+      label: 'Domain (optional)',
+      type: 'text',
+      placeholder: 'company.com',
+      helpText: 'Primary Google Workspace domain. Leave blank for all domains.',
+    },
+  ],
   azure_ad: [],
   jira: [],
   slack: [],

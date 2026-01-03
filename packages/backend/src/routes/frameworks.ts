@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { prisma } from '../config/db.js';
 import { requireAuth, requireOrganization, validate } from '../middleware/index.js';
 import { NotFoundError } from '../utils/errors.js';
+import {
+  enableFrameworkWithControls,
+  getFrameworkEnablementPreview,
+} from '../services/framework-enablement.js';
 
 const router: IRouter = Router();
 
@@ -39,6 +43,7 @@ router.get('/', async (_req, res) => {
 // ===========================================
 
 // POST /frameworks/enable - Enable a framework for the organization
+// This also generates controls from the framework requirements
 router.post(
   '/enable',
   requireAuth,
@@ -59,28 +64,41 @@ router.post(
       throw new NotFoundError('Framework not found');
     }
 
-    // Enable framework for organization (upsert to handle re-enabling)
-    const orgFramework = await prisma.organizationFramework.upsert({
-      where: {
-        organizationId_frameworkId: {
-          organizationId,
-          frameworkId,
-        },
-      },
-      update: {},
-      create: {
-        organizationId,
-        frameworkId,
-      },
-    });
+    // Enable framework and generate controls from requirements
+    const result = await enableFrameworkWithControls(organizationId, frameworkId);
 
     res.json({
       success: true,
       data: {
-        id: orgFramework.id,
-        frameworkId: orgFramework.frameworkId,
-        enabledAt: orgFramework.createdAt,
+        id: result.organizationFrameworkId,
+        frameworkId,
+        frameworkName: framework.name,
+        controlsCreated: result.controlsCreated,
+        controlsSkipped: result.controlsSkipped,
+        mappingsCreated: result.mappingsCreated,
+        message: `Enabled ${framework.name}. Created ${result.controlsCreated} controls.`,
       },
+    });
+  }
+);
+
+// GET /frameworks/enable/preview - Preview what enabling a framework would create
+router.get(
+  '/enable/preview',
+  requireAuth,
+  requireOrganization(),
+  validate({
+    query: z.object({ frameworkId: z.string().uuid() }),
+  }),
+  async (req, res) => {
+    const { frameworkId } = req.query as { frameworkId: string };
+    const organizationId = req.organizationId!;
+
+    const preview = await getFrameworkEnablementPreview(organizationId, frameworkId);
+
+    res.json({
+      success: true,
+      data: preview,
     });
   }
 );

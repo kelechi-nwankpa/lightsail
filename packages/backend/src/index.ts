@@ -9,6 +9,7 @@ import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { logger } from './utils/logger.js';
 import { authMiddleware, errorHandler } from './middleware/index.js';
 import { apiRouter } from './routes/index.js';
+import { syncScheduler } from './integrations/index.js';
 
 const app = express();
 
@@ -51,6 +52,9 @@ async function start() {
     // Connect to database
     await connectDatabase();
 
+    // Start integration sync scheduler
+    syncScheduler.start();
+
     // Start listening
     app.listen(env.PORT, () => {
       logger.info(`🚀 Server running on http://localhost:${env.PORT}`);
@@ -65,6 +69,7 @@ async function start() {
 // Graceful shutdown
 async function shutdown() {
   logger.info('Shutting down...');
+  syncScheduler.stop();
   await disconnectDatabase();
   process.exit(0);
 }

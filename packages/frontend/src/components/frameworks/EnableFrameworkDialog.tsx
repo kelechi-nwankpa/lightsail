@@ -18,7 +18,7 @@ interface EnableFrameworkDialogProps {
   onOpenChange: (open: boolean) => void;
   frameworks: FrameworkListItem[];
   enabledFrameworkIds: string[];
-  onEnable: (frameworkId: string) => Promise<void>;
+  onEnable: (frameworkId: string) => Promise<unknown>;
   isLoading?: boolean;
 }
 

@@ -57,10 +57,12 @@ export default function Frameworks() {
     const framework = frameworks.find((f) => f.id === frameworkId);
     setEnablingFrameworkId(frameworkId);
     try {
-      await enableFramework(frameworkId);
+      const result = await enableFramework(frameworkId);
       await refetchEnabled();
       toast.success('Framework enabled', {
-        description: `${framework?.name || 'Framework'} has been enabled for your organization.`,
+        description: result?.controlsCreated
+          ? `${framework?.name || 'Framework'} enabled. Created ${result.controlsCreated} controls for your organization.`
+          : `${framework?.name || 'Framework'} has been enabled for your organization.`,
       });
     } catch (err) {
       console.error('Failed to enable framework:', err);

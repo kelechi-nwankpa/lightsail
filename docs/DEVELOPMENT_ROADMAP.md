@@ -315,16 +315,16 @@ interface SyncSchedule {
 
 ### 1.7 Deliverables Checklist
 
-- [ ] Integration engine: Sync scheduler with cron
-- [ ] Integration engine: Job queue (Bull/BullMQ)
+- [x] Integration engine: Sync scheduler with cron (node-cron based)
+- [x] Integration engine: Job queue (in-memory, BullMQ optional - requires Redis)
 - [x] Integration engine: Credential vault (encrypted storage)
 - [x] Integration engine: Evidence generator
 - [x] Integration engine: Control matcher
-- [ ] Provider: AWS IAM collector
-- [ ] Provider: AWS CloudTrail collector
-- [ ] Provider: AWS S3 collector
-- [ ] Provider: Google Workspace Directory collector
-- [ ] Provider: Google Workspace Security collector
+- [x] Provider: AWS IAM collector
+- [x] Provider: AWS CloudTrail collector
+- [x] Provider: AWS S3 collector
+- [x] Provider: Google Workspace Directory collector
+- [x] Provider: Google Workspace Security collector
 - [x] Provider: GitHub repository collector
 - [x] Provider: GitHub security collector (branch protection, Dependabot)
 - [x] API: Integration connection endpoints
@@ -1253,6 +1253,7 @@ Throughout all phases, reject these patterns:
 |------|---------|---------|
 | Jan 2026 | 1.0 | Initial roadmap based on philosophy evaluation |
 | Jan 3, 2026 | 1.1 | Updated checklist items: Phase 0 mostly complete, Phase 1 GitHub integration complete, Phase 2 basic verification complete |
+| Jan 3, 2026 | 1.2 | Phase 1 COMPLETE: Added sync scheduler, AWS provider (IAM, CloudTrail, S3), Google Workspace provider (Directory, Security) |
 
 ---
 

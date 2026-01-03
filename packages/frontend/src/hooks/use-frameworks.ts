@@ -135,8 +135,17 @@ export function useEnabledFrameworks() {
 
   const enableFramework = async (frameworkId: string) => {
     try {
-      await api.post('/frameworks/enable', { frameworkId });
+      const result = await api.post<{
+        id: string;
+        frameworkId: string;
+        frameworkName: string;
+        controlsCreated: number;
+        controlsSkipped: number;
+        mappingsCreated: number;
+        message: string;
+      }>('/frameworks/enable', { frameworkId });
       await fetchEnabledFrameworks();
+      return result;
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to enable framework');
     }

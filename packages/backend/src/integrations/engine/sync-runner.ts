@@ -1,6 +1,8 @@
 import { prisma } from '../../config/db.js';
 import { credentialVault } from '../../services/credential-vault.js';
 import { GitHubProvider } from '../providers/github/index.js';
+import { AWSProvider } from '../providers/aws/index.js';
+import { GoogleWorkspaceProvider } from '../providers/google-workspace/index.js';
 import type { BaseIntegrationProvider } from '../providers/base-provider.js';
 import type { SyncResult, GeneratedEvidence, IntegrationProviderConfig, ControlMapping } from './types.js';
 import { logger } from '../../utils/logger.js';
@@ -27,11 +29,10 @@ export class SyncRunner {
     switch (type) {
       case 'github':
         return new GitHubProvider(config);
-      // Add more providers as implemented:
-      // case 'aws':
-      //   return new AWSProvider(config);
-      // case 'gsuite':
-      //   return new GoogleWorkspaceProvider(config);
+      case 'aws':
+        return new AWSProvider(config);
+      case 'gsuite':
+        return new GoogleWorkspaceProvider(config);
       default:
         throw new Error(`Unsupported integration type: ${type}`);
     }
