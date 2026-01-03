@@ -1,6 +1,6 @@
 # Lightsail Development Roadmap: Security-First Phases
 
-> **Last Updated:** January 2026
+> **Last Updated:** January 3, 2026
 >
 > **Guiding Principle:** Security creates compliance — compliance does not create security.
 
@@ -140,14 +140,14 @@ Update frontend to show honest status:
 
 ### 0.4 Deliverables Checklist
 
-- [ ] Migration: Add `verificationStatus`, `verifiedAt`, `verificationSource` to Control
-- [ ] Migration: Add `isProvisional` to Evidence
-- [ ] Migration: Create `ControlEffectivenessLog` table
-- [ ] API: Control status change requires justification
-- [ ] API: Evidence creation defaults `isProvisional: true`
+- [x] Migration: Add `verificationStatus`, `verifiedAt`, `verificationSource` to Control
+- [x] Migration: Add `isProvisional` to Evidence
+- [x] Migration: Create `ControlEffectivenessLog` table
+- [x] API: Control status change requires justification
+- [x] API: Evidence creation defaults `isProvisional: true`
 - [ ] API: Risk residual score auto-calculated
-- [ ] UI: Verification status badges on controls
-- [ ] UI: Provisional badge on manual evidence
+- [x] UI: Verification status badges on controls
+- [x] UI: Provisional badge on manual evidence
 - [ ] UI: Rename "Compliance Progress" to "Framework Coverage"
 
 ---
@@ -317,22 +317,22 @@ interface SyncSchedule {
 
 - [ ] Integration engine: Sync scheduler with cron
 - [ ] Integration engine: Job queue (Bull/BullMQ)
-- [ ] Integration engine: Credential vault (encrypted storage)
-- [ ] Integration engine: Evidence generator
-- [ ] Integration engine: Control matcher
+- [x] Integration engine: Credential vault (encrypted storage)
+- [x] Integration engine: Evidence generator
+- [x] Integration engine: Control matcher
 - [ ] Provider: AWS IAM collector
 - [ ] Provider: AWS CloudTrail collector
 - [ ] Provider: AWS S3 collector
 - [ ] Provider: Google Workspace Directory collector
 - [ ] Provider: Google Workspace Security collector
-- [ ] Provider: GitHub repository collector
-- [ ] Provider: GitHub security collector
-- [ ] API: Integration connection endpoints
-- [ ] API: Manual sync trigger endpoint
-- [ ] API: Integration status/logs endpoints
-- [ ] UI: Integration connection wizard
-- [ ] UI: Integration status dashboard
-- [ ] UI: Sync history/logs view
+- [x] Provider: GitHub repository collector
+- [x] Provider: GitHub security collector (branch protection, Dependabot)
+- [x] API: Integration connection endpoints
+- [x] API: Manual sync trigger endpoint
+- [x] API: Integration status/logs endpoints
+- [x] UI: Integration connection wizard
+- [x] UI: Integration status dashboard
+- [x] UI: Sync history/logs view
 
 ---
 
@@ -500,17 +500,17 @@ function calculateControlHealth(control: Control): ControlHealth {
 
 ### 2.5 Deliverables Checklist
 
-- [ ] Verification rules engine
-- [ ] Default verification rules for common controls
-- [ ] Verification status calculation job
+- [x] Verification rules engine (basic - via integration sync)
+- [x] Default verification rules for common controls (pattern matching)
+- [x] Verification status calculation job (sync-runner updates controls)
 - [ ] Control health score calculator
-- [ ] Triggers for re-verification
+- [x] Triggers for re-verification (integration sync)
 - [ ] API: Get control health score
 - [ ] API: Get verification history
 - [ ] API: Manual verification trigger
-- [ ] UI: Control health indicator
-- [ ] UI: Verification status badge
-- [ ] UI: "Why is this unverified?" explanation
+- [x] UI: Control health indicator (completion percentage)
+- [x] UI: Verification status badge
+- [x] UI: "Why is this unverified?" explanation (automation status section)
 
 ---
 
@@ -1252,6 +1252,7 @@ Throughout all phases, reject these patterns:
 | Date | Version | Changes |
 |------|---------|---------|
 | Jan 2026 | 1.0 | Initial roadmap based on philosophy evaluation |
+| Jan 3, 2026 | 1.1 | Updated checklist items: Phase 0 mostly complete, Phase 1 GitHub integration complete, Phase 2 basic verification complete |
 
 ---
 
