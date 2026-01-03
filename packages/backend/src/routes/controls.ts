@@ -103,6 +103,10 @@ router.get(
       verificationStatus: c.verificationStatus,
       verifiedAt: c.verifiedAt,
       verificationSource: c.verificationSource,
+      verificationDetails: c.verificationDetails,
+      // Automated control tracking
+      isAutomated: c.isAutomated,
+      automationSource: c.automationSource,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       evidenceCount: c._count.evidenceLinks,
@@ -205,6 +209,14 @@ router.get(
         reviewFrequencyDays: control.reviewFrequencyDays,
         lastReviewedAt: control.lastReviewedAt,
         nextReviewAt: control.nextReviewAt,
+        // Phase 0: Verification status fields
+        verificationStatus: control.verificationStatus,
+        verifiedAt: control.verifiedAt,
+        verificationSource: control.verificationSource,
+        verificationDetails: control.verificationDetails,
+        // Automated control tracking
+        isAutomated: control.isAutomated,
+        automationSource: control.automationSource,
         createdAt: control.createdAt,
         updatedAt: control.updatedAt,
         frameworkMappings: control.frameworkMappings.map((m) => ({

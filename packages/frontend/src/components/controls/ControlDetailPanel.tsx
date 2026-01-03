@@ -20,7 +20,9 @@ import {
   ExternalLink,
   Plus,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  Bot
 } from 'lucide-react';
 import type { ControlDetail } from '../../types/controls';
 import { cn } from '../../lib/utils';
@@ -227,6 +229,84 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
               <DetailSection title="Implementation Notes">
                 <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
                   <p className="text-sm text-blue-800">{control.implementationNotes}</p>
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Automation Status */}
+            {control.isAutomated && (
+              <DetailSection title="Automation Status">
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 rounded-md bg-violet-100">
+                      <Bot className="h-4 w-4 text-violet-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-violet-900">Automated Control</span>
+                        <Badge variant="secondary" className="bg-violet-100 text-violet-700 text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Auto-verified
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-violet-600 mt-0.5">
+                        Status managed by integration
+                      </p>
+                    </div>
+                  </div>
+
+                  {control.automationSource && (
+                    <div className="flex items-center gap-2 text-sm mb-2">
+                      <span className="text-violet-600">Source:</span>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {control.automationSource}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {control.verificationDetails && (
+                    <div className="space-y-2 pt-2 border-t border-violet-200">
+                      {control.verificationDetails.confidence && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-violet-600">Confidence:</span>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-xs",
+                              control.verificationDetails.confidence === 'high' && "bg-green-100 text-green-700",
+                              control.verificationDetails.confidence === 'medium' && "bg-yellow-100 text-yellow-700",
+                              control.verificationDetails.confidence === 'low' && "bg-orange-100 text-orange-700"
+                            )}
+                          >
+                            {control.verificationDetails.confidence}
+                          </Badge>
+                        </div>
+                      )}
+                      {control.verificationDetails.reason && (
+                        <div className="text-sm">
+                          <span className="text-violet-600">Finding: </span>
+                          <span className="text-violet-900">{control.verificationDetails.reason}</span>
+                        </div>
+                      )}
+                      {control.verificationDetails.metrics && Object.keys(control.verificationDetails.metrics).length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-violet-200">
+                          <p className="text-xs text-violet-600 mb-1.5">Metrics:</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(control.verificationDetails.metrics).map(([key, value]) => (
+                              <div key={key} className="bg-white/60 rounded px-2 py-1">
+                                <p className="text-xs text-violet-500 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                                </p>
+                                <p className="text-sm font-medium text-violet-900">
+                                  {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DetailSection>
             )}

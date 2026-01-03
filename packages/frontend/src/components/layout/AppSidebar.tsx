@@ -32,6 +32,7 @@ import {
   Search,
   Target,
   Package,
+  Plug,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -164,6 +165,10 @@ function CommandPalette() {
           <CommandItem onSelect={() => { window.location.href = '/evidence'; }}>
             <FileCheck className="mr-2 h-4 w-4" />
             Evidence
+          </CommandItem>
+          <CommandItem onSelect={() => { window.location.href = '/integrations'; }}>
+            <Plug className="mr-2 h-4 w-4" />
+            Integrations
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />

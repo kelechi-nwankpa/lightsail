@@ -29,10 +29,24 @@ export interface ControlListItem {
   verificationStatus: VerificationStatus;
   verifiedAt: string | null;
   verificationSource: string | null;
+  verificationDetails: VerificationDetails | null;
+  // Automated control tracking (set by integrations)
+  isAutomated: boolean;
+  automationSource: string | null;
   createdAt: string;
   updatedAt: string;
   evidenceCount: number;
   frameworkMappings: FrameworkMapping[];
+}
+
+export interface VerificationDetails {
+  evidenceTitle?: string;
+  verifiedAt?: string;
+  source?: string;
+  matchedBy?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  reason?: string;
+  metrics?: Record<string, unknown>;
 }
 
 export interface ControlDetail extends ControlListItem {

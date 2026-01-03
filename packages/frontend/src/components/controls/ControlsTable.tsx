@@ -11,7 +11,7 @@ import { Skeleton } from '../ui/skeleton';
 import { Checkbox } from '../ui/checkbox';
 import { ControlStatusBadge } from './ControlStatusBadge';
 import { VerificationStatusBadge } from './VerificationStatusBadge';
-import { FileText, AlertCircle, ChevronRight } from 'lucide-react';
+import { FileText, AlertCircle, ChevronRight, Bot } from 'lucide-react';
 import type { ControlListItem } from '../../types/controls';
 import { cn } from '../../lib/utils';
 
@@ -190,7 +190,14 @@ export function ControlsTable({
                   {control.code || '—'}
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium">{control.name}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">{control.name}</span>
+                    {control.isAutomated && (
+                      <span title={`Auto-verified by ${control.automationSource || 'integration'}`}>
+                        <Bot className="h-3.5 w-3.5 text-violet-500" />
+                      </span>
+                    )}
+                  </div>
                   {control.description && (
                     <div className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
                       {control.description}

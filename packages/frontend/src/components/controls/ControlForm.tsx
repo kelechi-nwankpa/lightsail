@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,15 +31,56 @@ interface ControlFormProps {
 export function ControlForm({ open, onOpenChange, control, onSubmit, isLoading }: ControlFormProps) {
   const isEditing = !!control;
 
-  const [formData, setFormData] = useState<CreateControlInput & { implementationStatus?: ControlStatus; implementationNotes?: string }>({
-    code: control?.code || '',
-    name: control?.name || '',
-    description: control?.description || '',
-    riskLevel: control?.riskLevel || undefined,
-    reviewFrequencyDays: control?.reviewFrequencyDays || 90,
-    implementationStatus: control?.implementationStatus,
-    implementationNotes: control?.implementationNotes || '',
+  const [formData, setFormData] = useState<CreateControlInput & {
+    implementationStatus?: ControlStatus;
+    implementationNotes?: string;
+    statusChangeJustification?: string;
+  }>({
+    code: '',
+    name: '',
+    description: '',
+    riskLevel: undefined,
+    reviewFrequencyDays: 90,
+    implementationStatus: undefined,
+    implementationNotes: '',
+    statusChangeJustification: '',
   });
+
+  // Track original status to detect changes
+  const [originalStatus, setOriginalStatus] = useState<ControlStatus | undefined>(undefined);
+
+  // Sync form data when control prop changes (e.g., opening edit dialog)
+  useEffect(() => {
+    if (control) {
+      setFormData({
+        code: control.code || '',
+        name: control.name || '',
+        description: control.description || '',
+        riskLevel: control.riskLevel || undefined,
+        reviewFrequencyDays: control.reviewFrequencyDays || 90,
+        implementationStatus: control.implementationStatus,
+        implementationNotes: control.implementationNotes || '',
+        statusChangeJustification: '',
+      });
+      setOriginalStatus(control.implementationStatus);
+    } else {
+      // Reset form when creating new control
+      setFormData({
+        code: '',
+        name: '',
+        description: '',
+        riskLevel: undefined,
+        reviewFrequencyDays: 90,
+        implementationStatus: undefined,
+        implementationNotes: '',
+        statusChangeJustification: '',
+      });
+      setOriginalStatus(undefined);
+    }
+  }, [control]);
+
+  // Check if status is being changed
+  const isStatusChanging = isEditing && formData.implementationStatus !== originalStatus;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +94,11 @@ export function ControlForm({ open, onOpenChange, control, onSubmit, isLoading }
     };
 
     if (isEditing) {
-      (data as UpdateControlInput).implementationStatus = formData.implementationStatus;
+      // Only include implementationStatus if it's actually changing
+      if (isStatusChanging) {
+        (data as UpdateControlInput).implementationStatus = formData.implementationStatus;
+        (data as UpdateControlInput).statusChangeJustification = formData.statusChangeJustification;
+      }
       (data as UpdateControlInput).implementationNotes = formData.implementationNotes || undefined;
     }
 
@@ -138,6 +183,24 @@ export function ControlForm({ open, onOpenChange, control, onSubmit, isLoading }
                   </Select>
                 </div>
 
+                {isStatusChanging && (
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label htmlFor="justification" className="text-right text-sm font-medium pt-2">
+                      Justification *
+                    </label>
+                    <Textarea
+                      id="justification"
+                      value={formData.statusChangeJustification || ''}
+                      onChange={(e) => setFormData({ ...formData, statusChangeJustification: e.target.value })}
+                      className="col-span-3"
+                      placeholder="Explain why the status is changing (min 10 characters)..."
+                      rows={2}
+                      required
+                      minLength={10}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-4 items-start gap-4">
                   <label htmlFor="notes" className="text-right text-sm font-medium pt-2">
                     Notes
@@ -195,7 +258,14 @@ export function ControlForm({ open, onOpenChange, control, onSubmit, isLoading }
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.name}>
+            <Button
+              type="submit"
+              disabled={
+                isLoading ||
+                !formData.name ||
+                (isStatusChanging && (!formData.statusChangeJustification || formData.statusChangeJustification.length < 10))
+              }
+            >
               {isLoading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
