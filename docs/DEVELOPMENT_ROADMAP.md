@@ -503,11 +503,11 @@ function calculateControlHealth(control: Control): ControlHealth {
 - [x] Verification rules engine (basic - via integration sync)
 - [x] Default verification rules for common controls (pattern matching)
 - [x] Verification status calculation job (sync-runner updates controls)
-- [ ] Control health score calculator
+- [x] Control health score calculator
 - [x] Triggers for re-verification (integration sync)
-- [ ] API: Get control health score
-- [ ] API: Get verification history
-- [ ] API: Manual verification trigger
+- [x] API: Get control health score
+- [x] API: Get verification history
+- [x] API: Manual verification trigger
 - [x] UI: Control health indicator (completion percentage)
 - [x] UI: Verification status badge
 - [x] UI: "Why is this unverified?" explanation (automation status section)

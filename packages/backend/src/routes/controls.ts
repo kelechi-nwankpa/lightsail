@@ -9,6 +9,11 @@ import {
   updateControlSchema,
   controlFiltersSchema,
 } from '@lightsail/shared';
+import {
+  calculateControlHealth,
+  getVerificationHistory,
+  triggerManualVerification,
+} from '../services/control-health.js';
 
 const router: IRouter = Router();
 
@@ -629,6 +634,101 @@ router.delete(
     });
 
     res.json({ success: true, message: 'Mapping removed' });
+  }
+);
+
+// ============================================
+// Control Health & Verification Endpoints
+// ============================================
+
+// GET /controls/:id/health - Get control health score
+router.get(
+  '/:id/health',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+  }),
+  async (req, res) => {
+    const controlId = req.params.id!;
+    const organizationId = req.organizationId!;
+
+    // Verify control exists and belongs to organization
+    const control = await prisma.control.findFirst({
+      where: { id: controlId, organizationId, deletedAt: null },
+    });
+
+    if (!control) {
+      throw new NotFoundError('Control not found');
+    }
+
+    const healthResult = await calculateControlHealth(controlId);
+
+    res.json({
+      success: true,
+      data: healthResult,
+    });
+  }
+);
+
+// GET /controls/:id/verification-history - Get verification history
+router.get(
+  '/:id/verification-history',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+    }),
+  }),
+  async (req, res) => {
+    const controlId = req.params.id!;
+    const organizationId = req.organizationId!;
+    const limit = Number(req.query.limit) || 50;
+
+    // Verify control exists and belongs to organization
+    const control = await prisma.control.findFirst({
+      where: { id: controlId, organizationId, deletedAt: null },
+    });
+
+    if (!control) {
+      throw new NotFoundError('Control not found');
+    }
+
+    const history = await getVerificationHistory(controlId, limit);
+
+    res.json({
+      success: true,
+      data: history,
+    });
+  }
+);
+
+// POST /controls/:id/verify - Trigger manual verification
+router.post(
+  '/:id/verify',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+  }),
+  async (req, res) => {
+    const controlId = req.params.id!;
+    const organizationId = req.organizationId!;
+    const auth = getAuth(req);
+    const userId = auth.userId!;
+
+    // Verify control exists and belongs to organization
+    const control = await prisma.control.findFirst({
+      where: { id: controlId, organizationId, deletedAt: null },
+    });
+
+    if (!control) {
+      throw new NotFoundError('Control not found');
+    }
+
+    const healthResult = await triggerManualVerification(controlId, userId);
+
+    res.json({
+      success: true,
+      data: healthResult,
+      message: 'Control verification triggered successfully',
+    });
   }
 );
 
