@@ -145,7 +145,7 @@ export function FrameworkDetailPanel({
               {enabledFramework && (
                 <div className="px-6 py-4 border-b bg-muted/30">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="font-medium">Compliance Progress</span>
+                    <span className="font-medium">Framework Coverage</span>
                     <span className="font-semibold">{progress}%</span>
                   </div>
                   <Progress value={progress} className="h-2 mb-3" />

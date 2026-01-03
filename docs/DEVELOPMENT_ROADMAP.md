@@ -145,10 +145,10 @@ Update frontend to show honest status:
 - [x] Migration: Create `ControlEffectivenessLog` table
 - [x] API: Control status change requires justification
 - [x] API: Evidence creation defaults `isProvisional: true`
-- [ ] API: Risk residual score auto-calculated
+- [x] API: Risk residual score auto-calculated
 - [x] UI: Verification status badges on controls
 - [x] UI: Provisional badge on manual evidence
-- [ ] UI: Rename "Compliance Progress" to "Framework Coverage"
+- [x] UI: Rename "Compliance Progress" to "Framework Coverage"
 
 ---
 

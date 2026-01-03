@@ -110,7 +110,7 @@ function MonitoringCard({
   );
 }
 
-// Compliance Progress Card (Framework)
+// Framework Coverage Card
 function FrameworkProgressCard({
   name,
   version,
@@ -382,10 +382,10 @@ export function DashboardPage() {
         </Button>
       </div>
 
-        {/* Compliance Progress Section */}
+        {/* Framework Coverage Section */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Compliance Progress</h2>
+            <h2 className="text-lg font-semibold">Framework Coverage</h2>
             <span className="text-sm text-muted-foreground">
               Last updated less than a minute ago
             </span>
