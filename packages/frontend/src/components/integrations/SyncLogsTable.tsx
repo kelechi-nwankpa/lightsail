@@ -8,7 +8,7 @@ import {
 } from '../ui/table';
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
-import { CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, AlertCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import type { IntegrationLog } from '../../types/integrations';
 
@@ -56,6 +56,33 @@ function formatDuration(ms: number | null): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
+function ControlsStatus({ log }: { log: IntegrationLog }) {
+  const verified = log.details?.controlsVerified ?? 0;
+  const failed = log.details?.controlsFailed ?? 0;
+  const total = verified + failed;
+
+  if (total === 0) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {verified > 0 && (
+        <span className="flex items-center gap-1 text-green-600" title={`${verified} controls verified`}>
+          <ShieldCheck className="h-3 w-3" />
+          {verified}
+        </span>
+      )}
+      {failed > 0 && (
+        <span className="flex items-center gap-1 text-amber-600" title={`${failed} controls need attention`}>
+          <AlertTriangle className="h-3 w-3" />
+          {failed}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SyncLogsTable({ logs, isLoading }: SyncLogsTableProps) {
   if (isLoading) {
     return (
@@ -89,6 +116,7 @@ export function SyncLogsTable({ logs, isLoading }: SyncLogsTableProps) {
           <TableHead>Status</TableHead>
           <TableHead>Operation</TableHead>
           <TableHead>Items</TableHead>
+          <TableHead>Controls</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead>Time</TableHead>
         </TableRow>
@@ -122,6 +150,9 @@ export function SyncLogsTable({ logs, isLoading }: SyncLogsTableProps) {
                     </span>
                   )}
                 </div>
+              </TableCell>
+              <TableCell>
+                <ControlsStatus log={log} />
               </TableCell>
               <TableCell className="text-muted-foreground">
                 {formatDuration(log.durationMs)}

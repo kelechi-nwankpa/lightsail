@@ -43,6 +43,7 @@ export function useControls(initialFilters: ControlFilters = {}) {
     try {
       const params = new URLSearchParams();
       if (filters.status) params.set('status', filters.status);
+      if (filters.verificationStatus) params.set('verificationStatus', filters.verificationStatus);
       if (filters.ownerId) params.set('ownerId', filters.ownerId);
       if (filters.frameworkId) params.set('frameworkId', filters.frameworkId);
       if (filters.riskLevel) params.set('riskLevel', filters.riskLevel);
@@ -146,6 +147,70 @@ export function useControl(id: string | null) {
   }, [fetchControl]);
 
   return { control, isLoading, error, refetch: fetchControl };
+}
+
+// Stats response type
+interface ControlStats {
+  total: number;
+  implementationStatus: {
+    implemented: number;
+    inProgress: number;
+    notStarted: number;
+    notApplicable: number;
+  };
+  verificationStatus: {
+    verified: number;
+    unverified: number;
+    failed: number;
+    stale: number;
+  };
+  needsEvidence: number;
+  completionRate: number;
+  verificationRate: number;
+}
+
+export function useControlStats(frameworkId?: string) {
+  const { isLoaded, isSignedIn, getToken, orgId } = useAuth();
+
+  const [stats, setStats] = useState<ControlStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      api.setTokenGetter(() => getToken());
+    }
+  }, [isLoaded, isSignedIn, getToken]);
+
+  const fetchStats = useCallback(async () => {
+    if (!isLoaded || !isSignedIn || !orgId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (frameworkId) params.set('frameworkId', frameworkId);
+      const queryString = params.toString();
+      const endpoint = `/controls/stats${queryString ? `?${queryString}` : ''}`;
+
+      const data = await api.get<ControlStats>(endpoint);
+      setStats(data);
+    } catch (err) {
+      console.error('Failed to fetch control stats:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch control stats'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [frameworkId, isLoaded, isSignedIn, orgId]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  return { stats, isLoading, error, refetch: fetchStats };
 }
 
 export function useControlMutations() {

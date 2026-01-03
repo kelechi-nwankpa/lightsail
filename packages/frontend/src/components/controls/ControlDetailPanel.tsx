@@ -101,6 +101,118 @@ function LoadingSkeleton() {
   );
 }
 
+// Remediation guidance based on source and verification details
+function RemediationGuidance({
+  source,
+  details
+}: {
+  source: string | null | undefined;
+  details: { reason?: string; metrics?: Record<string, unknown> } | null | undefined;
+}) {
+  // Generate remediation steps based on the source and what failed
+  const getRemediationSteps = (): string[] => {
+    const reason = details?.reason?.toLowerCase() || '';
+    const metrics = details?.metrics || {};
+
+    // AWS-specific remediation
+    if (source === 'aws-iam' || source === 'aws') {
+      if (reason.includes('mfa') || metrics.mfaEnabled === false) {
+        return [
+          'Enable MFA for all IAM users in AWS Console',
+          'Go to IAM → Users → Select user → Security credentials',
+          'Click "Assign MFA device" and follow the setup wizard',
+          'Use a virtual MFA app like Google Authenticator or Authy'
+        ];
+      }
+      if (reason.includes('password policy') || reason.includes('password')) {
+        return [
+          'Update the IAM password policy in AWS Console',
+          'Go to IAM → Account settings → Password policy',
+          'Set minimum length to 14+ characters',
+          'Require uppercase, lowercase, numbers, and symbols',
+          'Enable password expiration (90 days recommended)'
+        ];
+      }
+      if (reason.includes('root') || reason.includes('access key')) {
+        return [
+          'Remove root account access keys',
+          'Go to IAM → Security credentials (as root)',
+          'Delete any active access keys for root',
+          'Use IAM users with appropriate permissions instead'
+        ];
+      }
+      if (reason.includes('cloudtrail') || reason.includes('logging')) {
+        return [
+          'Enable CloudTrail for all regions',
+          'Go to CloudTrail → Create trail',
+          'Enable "Apply trail to all regions"',
+          'Configure S3 bucket for log storage',
+          'Enable log file validation'
+        ];
+      }
+      if (reason.includes('s3') || reason.includes('encryption') || reason.includes('bucket')) {
+        return [
+          'Enable default encryption on S3 buckets',
+          'Go to S3 → Select bucket → Properties',
+          'Enable "Default encryption" with SSE-S3 or SSE-KMS',
+          'Block public access at bucket or account level'
+        ];
+      }
+    }
+
+    // GitHub-specific remediation
+    if (source === 'github') {
+      if (reason.includes('branch protection')) {
+        return [
+          'Enable branch protection on main/master branch',
+          'Go to Repository → Settings → Branches',
+          'Add branch protection rule for "main"',
+          'Require pull request reviews before merging',
+          'Require status checks to pass'
+        ];
+      }
+      if (reason.includes('2fa') || reason.includes('mfa')) {
+        return [
+          'Enable 2FA for all organization members',
+          'Go to Organization → Settings → Security',
+          'Enable "Require two-factor authentication"',
+          'Members without 2FA will be removed from the org'
+        ];
+      }
+    }
+
+    // Google Workspace remediation
+    if (source === 'google-workspace' || source === 'gsuite') {
+      if (reason.includes('2fa') || reason.includes('mfa') || reason.includes('2-step')) {
+        return [
+          'Enforce 2-Step Verification for all users',
+          'Go to Admin Console → Security → 2-Step Verification',
+          'Set enforcement to "On" for all organizational units',
+          'Allow users to set up their 2FA method'
+        ];
+      }
+    }
+
+    // Generic remediation if no specific match
+    return [
+      'Review the failed verification details above',
+      'Check your security configuration in the relevant system',
+      'Implement the required security controls',
+      'Re-run the integration sync to verify the fix'
+    ];
+  };
+
+  const steps = getRemediationSteps();
+
+  return (
+    <ol className="list-decimal list-inside space-y-1.5 text-sm text-red-800">
+      {steps.map((step, index) => (
+        <li key={index} className="leading-relaxed">{step}</li>
+      ))}
+    </ol>
+  );
+}
+
 export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMappingChange }: ControlDetailPanelProps) {
   const [isMappingDialogOpen, setIsMappingDialogOpen] = useState(false);
   const { addMapping, removeMapping, isLoading: isMutating } = useControlMutations();
@@ -307,6 +419,40 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
                       )}
                     </div>
                   )}
+                </div>
+              </DetailSection>
+            )}
+
+            {/* Remediation Guidance for Failed Controls */}
+            {control.verificationStatus === 'failed' && (
+              <DetailSection title="Remediation Required">
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 rounded-md bg-red-100">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-red-900">Action Required</span>
+                      <p className="text-xs text-red-600 mt-0.5">
+                        This control failed automated verification
+                      </p>
+                    </div>
+                  </div>
+
+                  {control.verificationDetails?.reason && (
+                    <div className="mb-3 p-2 bg-white/60 rounded border border-red-100">
+                      <p className="text-xs text-red-600 mb-1">Issue:</p>
+                      <p className="text-sm text-red-900">{control.verificationDetails.reason}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-red-700">Remediation Steps:</p>
+                    <RemediationGuidance
+                      source={control.automationSource || control.verificationSource}
+                      details={control.verificationDetails}
+                    />
+                  </div>
                 </div>
               </DetailSection>
             )}

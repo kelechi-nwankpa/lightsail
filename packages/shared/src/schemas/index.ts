@@ -95,6 +95,7 @@ export const updateControlSchema = z.object({
 
 export const controlFiltersSchema = z.object({
   status: controlStatusSchema.optional(),
+  verificationStatus: verificationStatusSchema.optional(),
   ownerId: z.string().uuid().optional(),
   frameworkId: z.string().uuid().optional(),
   riskLevel: riskLevelSchema.optional(),

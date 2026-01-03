@@ -66,6 +66,7 @@ export interface EvidenceItem {
 
 export interface ControlFilters {
   status?: ControlStatus;
+  verificationStatus?: VerificationStatus;
   ownerId?: string;
   frameworkId?: string;
   riskLevel?: RiskLevel;

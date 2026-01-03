@@ -15,6 +15,85 @@ const router: IRouter = Router();
 // All routes require auth and organization
 router.use(requireAuth, requireOrganization());
 
+// GET /controls/stats - Get control statistics for dashboard
+router.get('/stats', async (req, res) => {
+  const organizationId = req.organizationId!;
+  const { frameworkId } = req.query;
+
+  // Build base where clause
+  let where: Prisma.ControlWhereInput = {
+    organizationId,
+    deletedAt: null,
+  };
+
+  // If filtering by framework, find controls mapped to it
+  if (frameworkId && typeof frameworkId === 'string') {
+    const controlIdsWithFramework = await prisma.controlFrameworkMapping.findMany({
+      where: {
+        frameworkRequirement: { frameworkId },
+        control: { organizationId, deletedAt: null },
+      },
+      select: { controlId: true },
+      distinct: ['controlId'],
+    });
+    where.id = { in: controlIdsWithFramework.map((c) => c.controlId) };
+  }
+
+  // Get all counts in parallel
+  const [
+    total,
+    implemented,
+    inProgress,
+    notStarted,
+    notApplicable,
+    verified,
+    unverified,
+    verificationFailed,
+    stale,
+    controlsWithEvidence,
+  ] = await Promise.all([
+    prisma.control.count({ where }),
+    prisma.control.count({ where: { ...where, implementationStatus: 'implemented' } }),
+    prisma.control.count({ where: { ...where, implementationStatus: 'in_progress' } }),
+    prisma.control.count({ where: { ...where, implementationStatus: 'not_started' } }),
+    prisma.control.count({ where: { ...where, implementationStatus: 'not_applicable' } }),
+    prisma.control.count({ where: { ...where, verificationStatus: 'verified' } }),
+    prisma.control.count({ where: { ...where, verificationStatus: 'unverified' } }),
+    prisma.control.count({ where: { ...where, verificationStatus: 'failed' } }),
+    prisma.control.count({ where: { ...where, verificationStatus: 'stale' } }),
+    prisma.control.count({
+      where: {
+        ...where,
+        evidenceLinks: { some: {} },
+      },
+    }),
+  ]);
+
+  const needsEvidence = total - controlsWithEvidence - notApplicable;
+
+  res.json({
+    success: true,
+    data: {
+      total,
+      implementationStatus: {
+        implemented,
+        inProgress,
+        notStarted,
+        notApplicable,
+      },
+      verificationStatus: {
+        verified,
+        unverified,
+        failed: verificationFailed,
+        stale,
+      },
+      needsEvidence: Math.max(0, needsEvidence),
+      completionRate: total > 0 ? Math.round((implemented / total) * 100) : 0,
+      verificationRate: total > 0 ? Math.round((verified / total) * 100) : 0,
+    },
+  });
+});
+
 // GET /controls - List controls with filters & pagination
 router.get(
   '/',
@@ -22,7 +101,7 @@ router.get(
   async (req, res) => {
     const organizationId = req.organizationId!;
     const filters = req.query as unknown as z.infer<typeof controlFiltersSchema>;
-    const { page, pageSize, status, ownerId, frameworkId, riskLevel, search } = filters;
+    const { page, pageSize, status, verificationStatus, ownerId, frameworkId, riskLevel, search } = filters;
 
     const where: Prisma.ControlWhereInput = {
       organizationId,
@@ -31,6 +110,10 @@ router.get(
 
     if (status) {
       where.implementationStatus = status;
+    }
+
+    if (verificationStatus) {
+      where.verificationStatus = verificationStatus;
     }
 
     if (ownerId) {

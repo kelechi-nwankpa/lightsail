@@ -53,6 +53,12 @@ export interface IntegrationLog {
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
+  details?: {
+    evidenceGenerated?: number;
+    controlsVerified?: number;
+    controlsFailed?: number;
+    errors?: Array<{ code: string; message: string }>;
+  } | null;
 }
 
 export interface IntegrationListItem {

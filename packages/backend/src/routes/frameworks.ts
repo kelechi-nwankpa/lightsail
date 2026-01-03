@@ -103,6 +103,56 @@ router.get(
   }
 );
 
+// POST /frameworks/regenerate-controls - Regenerate controls for all enabled frameworks
+// Useful when frameworks were enabled before control generation was implemented
+router.post(
+  '/regenerate-controls',
+  requireAuth,
+  requireOrganization(),
+  async (req, res) => {
+    const organizationId = req.organizationId!;
+
+    // Get all enabled frameworks for this org
+    const enabledFrameworks = await prisma.organizationFramework.findMany({
+      where: { organizationId },
+      include: { framework: true },
+    });
+
+    if (enabledFrameworks.length === 0) {
+      res.json({
+        success: true,
+        data: {
+          message: 'No frameworks enabled',
+          totalControlsCreated: 0,
+        },
+      });
+      return;
+    }
+
+    let totalControlsCreated = 0;
+    const results: Array<{ framework: string; controlsCreated: number; controlsSkipped: number }> = [];
+
+    for (const ef of enabledFrameworks) {
+      const result = await enableFrameworkWithControls(organizationId, ef.frameworkId);
+      totalControlsCreated += result.controlsCreated;
+      results.push({
+        framework: ef.framework.name,
+        controlsCreated: result.controlsCreated,
+        controlsSkipped: result.controlsSkipped,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        message: `Generated ${totalControlsCreated} controls across ${enabledFrameworks.length} frameworks`,
+        totalControlsCreated,
+        results,
+      },
+    });
+  }
+);
+
 // POST /frameworks/disable - Disable a framework for the organization
 router.post(
   '/disable',

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser, useOrganization } from '@clerk/clerk-react';
 import { toast } from 'sonner';
+import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Progress } from '../components/ui/progress';
 import {
@@ -21,6 +22,7 @@ import {
   Clock,
   AlertTriangle,
   Home,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function Frameworks() {
@@ -30,9 +32,10 @@ export default function Frameworks() {
   const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [enablingFrameworkId, setEnablingFrameworkId] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const { frameworks, isLoading: isLoadingFrameworks } = useFrameworks();
-  const { enabledFrameworks, isLoading: isLoadingEnabled, enableFramework, refetch: refetchEnabled } = useEnabledFrameworks();
+  const { enabledFrameworks, isLoading: isLoadingEnabled, enableFramework, refetch: refetchEnabled, regenerateControls } = useEnabledFrameworks();
   const { framework: frameworkDetail, isLoading: isLoadingDetail } = useFramework(selectedFrameworkId);
 
   // Calculate overall compliance stats
@@ -85,6 +88,25 @@ export default function Frameworks() {
     toast.success('Control linked', {
       description: 'The control has been linked to the requirement.',
     });
+  };
+
+  const handleRegenerateControls = async () => {
+    setIsRegenerating(true);
+    try {
+      const result = await regenerateControls();
+      toast.success('Controls regenerated', {
+        description: result?.totalControlsCreated
+          ? `Created ${result.totalControlsCreated} controls across ${result.results?.length || 0} frameworks.`
+          : 'Controls have been regenerated for all enabled frameworks.',
+      });
+    } catch (err) {
+      console.error('Failed to regenerate controls:', err);
+      toast.error('Failed to regenerate controls', {
+        description: 'Please try again later.',
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   if (!user || !organization) {
@@ -192,7 +214,18 @@ export default function Frameworks() {
           {/* Enabled Frameworks */}
           {enabledFrameworks.length > 0 && (
             <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Enabled Frameworks</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Enabled Frameworks</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateControls}
+                  disabled={isRegenerating}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  {isRegenerating ? 'Regenerating...' : 'Regenerate Controls'}
+                </Button>
+              </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {frameworks
                   .filter((f) => getEnabledFramework(f.id))

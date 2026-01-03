@@ -166,9 +166,26 @@ export default function Integrations() {
     setSyncingIds((prev) => new Set(prev).add(id));
     try {
       const result = await triggerSync(id);
-      toast.success('Sync completed', {
-        description: `Generated ${result.evidenceGenerated} evidence, verified ${result.controlsVerified} controls.`,
-      });
+      const totalControlsChecked = result.controlsVerified + result.controlsFailed;
+
+      // Build a descriptive message based on results
+      let description = `Generated ${result.evidenceGenerated} evidence`;
+      if (totalControlsChecked > 0) {
+        if (result.controlsVerified > 0 && result.controlsFailed === 0) {
+          description += `, verified ${result.controlsVerified} controls`;
+        } else if (result.controlsVerified === 0 && result.controlsFailed > 0) {
+          description += `, ${result.controlsFailed} controls need attention`;
+        } else {
+          description += `, ${result.controlsVerified} verified, ${result.controlsFailed} need attention`;
+        }
+      }
+
+      // Use appropriate toast type based on results
+      if (result.controlsFailed > 0 && result.controlsVerified === 0) {
+        toast.warning('Sync completed', { description });
+      } else {
+        toast.success('Sync completed', { description });
+      }
       refetch();
       if (selectedIntegration?.id === id) {
         refetchDetail();

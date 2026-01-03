@@ -160,5 +160,19 @@ export function useEnabledFrameworks() {
     }
   };
 
-  return { enabledFrameworks, isLoading, error, refetch: fetchEnabledFrameworks, enableFramework, disableFramework };
+  const regenerateControls = async () => {
+    try {
+      const result = await api.post<{
+        message: string;
+        totalControlsCreated: number;
+        results: Array<{ framework: string; controlsCreated: number; controlsSkipped: number }>;
+      }>('/frameworks/regenerate-controls');
+      await fetchEnabledFrameworks();
+      return result;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to regenerate controls');
+    }
+  };
+
+  return { enabledFrameworks, isLoading, error, refetch: fetchEnabledFrameworks, enableFramework, disableFramework, regenerateControls };
 }

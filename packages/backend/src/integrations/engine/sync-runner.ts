@@ -274,6 +274,8 @@ export class SyncRunner {
       },
     });
 
+    logger.debug(`Found ${controls.length} controls for organization ${organizationId}`);
+
     // Track which controls have been processed to avoid duplicates
     const processedControlIds = new Set<string>();
 

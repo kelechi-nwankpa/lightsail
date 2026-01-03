@@ -18,18 +18,16 @@ import { ControlDetailPanel } from '../components/controls/ControlDetailPanel';
 import { ControlForm } from '../components/controls/ControlForm';
 import { FrameworkProgress } from '../components/frameworks/FrameworkProgress';
 import { EnableFrameworkDialog } from '../components/frameworks/EnableFrameworkDialog';
-import { useControls, useControl, useControlMutations } from '../hooks/use-controls';
+import { useControls, useControl, useControlMutations, useControlStats } from '../hooks/use-controls';
 import { useFrameworks, useEnabledFrameworks } from '../hooks/use-frameworks';
 import {
   Plus,
-  AlertCircle,
-  CheckCircle2,
+  AlertTriangle,
   Clock,
-  FileText,
   ChevronRight,
   Home,
   ShieldCheck,
-  ShieldQuestion,
+  ShieldOff,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import type { ControlListItem, CreateControlInput, UpdateControlInput, EnabledFramework } from '../types/controls';
@@ -108,34 +106,40 @@ export default function Controls() {
   const { frameworks, isLoading: isLoadingAllFrameworks } = useFrameworks();
   const { enabledFrameworks, isLoading: isLoadingFrameworks, enableFramework } = useEnabledFrameworks();
 
-  // Calculate summary stats
+  // Fetch stats from dedicated endpoint (independent of filters)
+  const { stats: controlStats } = useControlStats(filters.frameworkId);
+
+  // Map stats from the API response
   const stats = useMemo(() => {
-    const implemented = controls.filter(c => c.implementationStatus === 'implemented').length;
-    const inProgress = controls.filter(c => c.implementationStatus === 'in_progress').length;
-    const notStarted = controls.filter(c => c.implementationStatus === 'not_started').length;
-    const needsEvidence = controls.filter(c => c.evidenceCount === 0 && c.implementationStatus !== 'not_applicable').length;
-
-    // Phase 0: Verification status tracking
-    const verified = controls.filter(c => c.verificationStatus === 'verified').length;
-    const unverified = controls.filter(c => c.verificationStatus === 'unverified').length;
-    const verificationFailed = controls.filter(c => c.verificationStatus === 'failed').length;
-    const stale = controls.filter(c => c.verificationStatus === 'stale').length;
-
+    if (!controlStats) {
+      return {
+        total: 0,
+        implemented: 0,
+        inProgress: 0,
+        notStarted: 0,
+        needsEvidence: 0,
+        completionRate: 0,
+        verified: 0,
+        unverified: 0,
+        verificationFailed: 0,
+        stale: 0,
+        verificationRate: 0
+      };
+    }
     return {
-      total: controls.length,
-      implemented,
-      inProgress,
-      notStarted,
-      needsEvidence,
-      completionRate: controls.length > 0 ? Math.round((implemented / controls.length) * 100) : 0,
-      // Phase 0: Verification stats
-      verified,
-      unverified,
-      verificationFailed,
-      stale,
-      verificationRate: controls.length > 0 ? Math.round((verified / controls.length) * 100) : 0
+      total: controlStats.total,
+      implemented: controlStats.implementationStatus.implemented,
+      inProgress: controlStats.implementationStatus.inProgress,
+      notStarted: controlStats.implementationStatus.notStarted,
+      needsEvidence: controlStats.needsEvidence,
+      completionRate: controlStats.completionRate,
+      verified: controlStats.verificationStatus.verified,
+      unverified: controlStats.verificationStatus.unverified,
+      verificationFailed: controlStats.verificationStatus.failed,
+      stale: controlStats.verificationStatus.stale,
+      verificationRate: controlStats.verificationRate
     };
-  }, [controls]);
+  }, [controlStats]);
 
   const handleSelectControl = (control: ControlListItem) => {
     setSelectedControl(control);
@@ -184,14 +188,6 @@ export default function Controls() {
     setSelectedFramework(framework);
     // Use frameworkId (the actual Framework ID) not id (OrganizationFramework ID)
     updateFilters({ frameworkId: framework.frameworkId });
-  };
-
-  const handleFilterByStatus = (status: string) => {
-    updateFilters({ status: status as any });
-  };
-
-  const handleFilterNeedsEvidence = () => {
-    updateFilters({ hasEvidence: false });
   };
 
   if (!user || !organization) {
@@ -312,79 +308,58 @@ export default function Controls() {
               />
             </section>
 
-            {/* Summary Cards - Vanta-style monitoring */}
+            {/* Control Health - Consolidated view */}
             <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Implementation Status</h2>
-              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                <SummaryCard
-                  icon={CheckCircle2}
-                  label="Implemented"
-                  value={stats.implemented}
-                  subtext={`${stats.completionRate}% of total controls`}
-                  variant="success"
-                  onClick={() => handleFilterByStatus('implemented')}
-                />
-                <SummaryCard
-                  icon={Clock}
-                  label="In Progress"
-                  value={stats.inProgress}
-                  subtext="Controls being worked on"
-                  variant="default"
-                  onClick={() => handleFilterByStatus('in_progress')}
-                />
-                <SummaryCard
-                  icon={AlertCircle}
-                  label="Not Started"
-                  value={stats.notStarted}
-                  subtext="Controls pending implementation"
-                  variant={stats.notStarted > 0 ? "warning" : "default"}
-                  onClick={() => handleFilterByStatus('not_started')}
-                />
-                <SummaryCard
-                  icon={FileText}
-                  label="Needs Evidence"
-                  value={stats.needsEvidence}
-                  subtext="Controls without evidence"
-                  variant={stats.needsEvidence > 0 ? "danger" : "success"}
-                  onClick={handleFilterNeedsEvidence}
-                />
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Control Health</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Verified by integrations = proven working. Failed = needs remediation.
+                  </p>
+                </div>
+                {(filters.verificationStatus || filters.status) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateFilters({ verificationStatus: undefined, status: undefined })}
+                    className="text-muted-foreground"
+                  >
+                    Clear filters
+                  </Button>
+                )}
               </div>
-            </section>
-
-            {/* Phase 0: Verification Status Section */}
-            <section className="mb-8">
-              <h2 className="text-lg font-semibold mb-4">Verification Status</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Controls verified by integrations have higher confidence than self-attested controls.
-              </p>
               <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
                   icon={ShieldCheck}
                   label="Verified"
                   value={stats.verified}
-                  subtext={`${stats.verificationRate}% verified by integrations`}
+                  subtext={`${stats.verificationRate}% proven by integrations`}
                   variant="success"
+                  onClick={() => updateFilters({ verificationStatus: 'verified', status: undefined })}
                 />
                 <SummaryCard
-                  icon={ShieldQuestion}
-                  label="Unverified"
-                  value={stats.unverified}
-                  subtext="Self-attested, needs verification"
-                  variant={stats.unverified > 0 ? "warning" : "default"}
-                />
-                <SummaryCard
-                  icon={AlertCircle}
-                  label="Failed"
+                  icon={AlertTriangle}
+                  label="Needs Attention"
                   value={stats.verificationFailed}
-                  subtext="Verification checks failed"
+                  subtext="Failed verification, fix required"
                   variant={stats.verificationFailed > 0 ? "danger" : "default"}
+                  onClick={() => updateFilters({ verificationStatus: 'failed', status: undefined })}
                 />
                 <SummaryCard
                   icon={Clock}
-                  label="Stale"
-                  value={stats.stale}
-                  subtext="Evidence has expired"
-                  variant={stats.stale > 0 ? "warning" : "default"}
+                  label="Pending"
+                  value={stats.unverified + stats.inProgress}
+                  subtext="Awaiting verification or in progress"
+                  variant="default"
+                  onClick={() => updateFilters({ verificationStatus: 'unverified', status: undefined })}
+                />
+                <SummaryCard
+                  icon={ShieldOff}
+                  label="Not Started"
+                  value={stats.notStarted}
+                  subtext="Controls not yet implemented"
+                  variant={stats.notStarted > 0 ? "warning" : "default"}
+                  onClick={() => updateFilters({ status: 'not_started', verificationStatus: undefined })}
                 />
               </div>
             </section>

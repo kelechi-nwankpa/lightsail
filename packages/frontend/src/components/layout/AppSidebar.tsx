@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import {
@@ -35,6 +36,38 @@ import {
   Plug,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { api } from '../../lib/api';
+
+// Hook to fetch controls needing attention count
+function useControlsNeedingAttention() {
+  const { isLoaded, isSignedIn, getToken, orgId } = useAuth();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !orgId) return;
+
+    api.setTokenGetter(() => getToken());
+
+    // Fetch controls with failed verification status
+    const fetchCount = async () => {
+      try {
+        const response = await api.getWithPagination<unknown[]>(
+          '/controls?verificationStatus=failed&pageSize=1'
+        );
+        setCount(response.pagination?.total || 0);
+      } catch (error) {
+        console.error('Failed to fetch controls needing attention:', error);
+      }
+    };
+
+    fetchCount();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchCount, 120000);
+    return () => clearInterval(interval);
+  }, [isLoaded, isSignedIn, getToken, orgId]);
+
+  return count;
+}
 
 // Sidebar context for managing collapsed state
 interface SidebarContextType {
@@ -217,6 +250,7 @@ export function AppSidebarProvider({ children }: AppSidebarProps) {
 
 export function AppSidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar();
+  const controlsNeedingAttention = useControlsNeedingAttention();
 
   return (
     <aside
@@ -276,7 +310,14 @@ export function AppSidebar() {
       <nav className="flex-1 overflow-y-auto py-4 space-y-1">
         <div className="px-2 space-y-1">
           <NavItem to="/dashboard" icon={Home} label="Home" isCollapsed={isCollapsed} />
-          <NavItem to="/controls" icon={Shield} label="Controls" isCollapsed={isCollapsed} />
+          <NavItem
+            to="/controls"
+            icon={Shield}
+            label="Controls"
+            isCollapsed={isCollapsed}
+            badge={controlsNeedingAttention > 0 ? String(controlsNeedingAttention) : undefined}
+            badgeVariant={controlsNeedingAttention > 0 ? 'destructive' : undefined}
+          />
         </div>
 
         <Separator className="my-3" />
