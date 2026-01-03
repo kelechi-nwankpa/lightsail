@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Skeleton } from '../ui/skeleton';
@@ -6,7 +7,7 @@ import { Progress } from '../ui/progress';
 import { ControlStatusBadge } from './ControlStatusBadge';
 import { VerificationStatusBadge } from './VerificationStatusBadge';
 import { FrameworkMappingDialog } from '../frameworks/FrameworkMappingDialog';
-import { useControlMutations } from '../../hooks/use-controls';
+import { useControlMutations, useControlHealth } from '../../hooks/use-controls';
 import {
   X,
   Edit2,
@@ -22,7 +23,11 @@ import {
   Trash2,
   ShieldCheck,
   Zap,
-  Bot
+  Bot,
+  RefreshCw,
+  TrendingUp,
+  Lightbulb,
+  Activity,
 } from 'lucide-react';
 import type { ControlDetail } from '../../types/controls';
 import { cn } from '../../lib/utils';
@@ -215,18 +220,44 @@ function RemediationGuidance({
 
 export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMappingChange }: ControlDetailPanelProps) {
   const [isMappingDialogOpen, setIsMappingDialogOpen] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const { addMapping, removeMapping, isLoading: isMutating } = useControlMutations();
+  const { health, isLoading: isLoadingHealth, triggerVerification } = useControlHealth(control?.id || null);
 
   if (!control && !isLoading) {
     return null;
   }
 
-  // Calculate completion metrics
-  const hasEvidence = control?.evidence && control.evidence.length > 0;
-  const hasMappings = control?.frameworkMappings && control.frameworkMappings.length > 0;
-  const isImplemented = control?.implementationStatus === 'implemented';
-  const completionItems = [hasEvidence, hasMappings, isImplemented].filter(Boolean).length;
-  const completionPercent = Math.round((completionItems / 3) * 100);
+  const handleTriggerVerification = async () => {
+    setIsVerifying(true);
+    try {
+      await triggerVerification();
+      toast.success('Verification complete', {
+        description: 'Control health score has been recalculated.',
+      });
+    } catch {
+      toast.error('Verification failed', {
+        description: 'Could not recalculate health score. Please try again.',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Get score color based on value
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-blue-600';
+    if (score >= 40) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 80) return 'bg-green-100 border-green-200';
+    if (score >= 60) return 'bg-blue-100 border-blue-200';
+    if (score >= 40) return 'bg-yellow-100 border-yellow-200';
+    return 'bg-red-100 border-red-200';
+  };
 
   return (
     <div className="w-[420px] h-full border-l bg-background flex flex-col">
@@ -286,45 +317,101 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
               </div>
             </div>
 
-            {/* Completion Progress */}
-            <div className="bg-muted/50 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Completion</span>
-                <span className="text-sm text-muted-foreground">{completionPercent}%</span>
+            {/* Health Score */}
+            <div className={cn(
+              "rounded-lg p-4 mb-6 border",
+              health ? getScoreBgColor(health.overallScore) : "bg-muted/50"
+            )}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Health Score</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleTriggerVerification}
+                  disabled={isVerifying || isLoadingHealth}
+                  className="h-7 px-2 text-xs"
+                >
+                  <RefreshCw className={cn("h-3 w-3 mr-1", isVerifying && "animate-spin")} />
+                  {isVerifying ? 'Verifying...' : 'Verify'}
+                </Button>
               </div>
-              <Progress value={completionPercent} className="h-2 mb-3" />
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-sm">
-                  {isImplemented ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className={isImplemented ? "text-green-700" : "text-muted-foreground"}>
-                    Implementation status
-                  </span>
+
+              {isLoadingHealth ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-20" />
+                  <Skeleton className="h-2 w-full" />
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  {hasEvidence ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+              ) : health ? (
+                <>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className={cn("text-4xl font-bold", getScoreColor(health.overallScore))}>
+                      {health.overallScore}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/ 100</span>
+                  </div>
+
+                  {/* Score Breakdown */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Verification</span>
+                      <span className="font-medium">{health.factors.verificationScore}/40</span>
+                    </div>
+                    <Progress value={(health.factors.verificationScore / 40) * 100} className="h-1" />
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Freshness</span>
+                      <span className="font-medium">{health.factors.freshnessScore}/25</span>
+                    </div>
+                    <Progress value={(health.factors.freshnessScore / 25) * 100} className="h-1" />
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Coverage</span>
+                      <span className="font-medium">{health.factors.coverageScore}/20</span>
+                    </div>
+                    <Progress value={(health.factors.coverageScore / 20) * 100} className="h-1" />
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Review</span>
+                      <span className="font-medium">{health.factors.reviewScore}/15</span>
+                    </div>
+                    <Progress value={(health.factors.reviewScore / 15) * 100} className="h-1" />
+                  </div>
+
+                  {/* Recommendations */}
+                  {health.factors.recommendations.length > 0 && (
+                    <div className="border-t pt-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-xs font-medium text-muted-foreground">Recommendations</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {health.factors.recommendations.slice(0, 3).map((rec, i) => (
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                            <TrendingUp className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/60" />
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                  <span className={hasEvidence ? "text-green-700" : "text-orange-600"}>
-                    {hasEvidence ? "Evidence attached" : "Evidence required"}
-                  </span>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-2">No health data available</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTriggerVerification}
+                    disabled={isVerifying}
+                  >
+                    <RefreshCw className={cn("h-3 w-3 mr-1", isVerifying && "animate-spin")} />
+                    Calculate Health Score
+                  </Button>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  {hasMappings ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className={hasMappings ? "text-green-700" : "text-muted-foreground"}>
-                    Framework mappings
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Description */}

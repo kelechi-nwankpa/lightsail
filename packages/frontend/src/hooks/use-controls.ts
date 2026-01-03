@@ -287,3 +287,79 @@ export function useControlMutations() {
     isLoading,
   };
 }
+
+// Control Health types
+interface ControlHealthFactors {
+  verificationScore: number;
+  verificationStatus: 'verified' | 'failed' | 'stale' | 'unverified';
+  freshnessScore: number;
+  daysSinceLastEvidence: number | null;
+  coverageScore: number;
+  evidenceCount: number;
+  hasIntegrationEvidence: boolean;
+  reviewScore: number;
+  daysSinceLastReview: number | null;
+  recommendations: string[];
+}
+
+interface ControlHealthResult {
+  controlId: string;
+  overallScore: number;
+  factors: ControlHealthFactors;
+  calculatedAt: string;
+}
+
+export function useControlHealth(controlId: string | null) {
+  const { isLoaded, isSignedIn, getToken, orgId } = useAuth();
+
+  const [health, setHealth] = useState<ControlHealthResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      api.setTokenGetter(() => getToken());
+    }
+  }, [isLoaded, isSignedIn, getToken]);
+
+  const fetchHealth = useCallback(async () => {
+    if (!controlId || !isLoaded || !isSignedIn || !orgId) {
+      setHealth(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.get<ControlHealthResult>(`/controls/${controlId}/health`);
+      setHealth(data);
+    } catch (err) {
+      console.error('Failed to fetch control health:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch control health'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [controlId, isLoaded, isSignedIn, orgId]);
+
+  useEffect(() => {
+    fetchHealth();
+  }, [fetchHealth]);
+
+  const triggerVerification = async () => {
+    if (!controlId) return null;
+
+    setIsLoading(true);
+    try {
+      const data = await api.post<ControlHealthResult>(`/controls/${controlId}/verify`, {});
+      setHealth(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to trigger verification:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { health, isLoading, error, refetch: fetchHealth, triggerVerification };
+}
