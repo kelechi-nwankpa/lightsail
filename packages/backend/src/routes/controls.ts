@@ -12,7 +12,8 @@ import {
 import {
   calculateControlHealth,
   getVerificationHistory,
-  triggerManualVerification,
+  markControlReviewed,
+  refreshControlHealth,
 } from '../services/control-health.js';
 
 const router: IRouter = Router();
@@ -701,9 +702,9 @@ router.get(
   }
 );
 
-// POST /controls/:id/verify - Trigger manual verification
+// POST /controls/:id/review - Mark control as reviewed (human review)
 router.post(
-  '/:id/verify',
+  '/:id/review',
   validate({
     params: z.object({ id: z.string().uuid() }),
   }),
@@ -722,12 +723,40 @@ router.post(
       throw new NotFoundError('Control not found');
     }
 
-    const healthResult = await triggerManualVerification(controlId, userId);
+    const healthResult = await markControlReviewed(controlId, userId);
 
     res.json({
       success: true,
       data: healthResult,
-      message: 'Control verification triggered successfully',
+      message: 'Control marked as reviewed',
+    });
+  }
+);
+
+// POST /controls/:id/refresh - Refresh health score without updating review date
+router.post(
+  '/:id/refresh',
+  validate({
+    params: z.object({ id: z.string().uuid() }),
+  }),
+  async (req, res) => {
+    const controlId = req.params.id!;
+    const organizationId = req.organizationId!;
+
+    // Verify control exists and belongs to organization
+    const control = await prisma.control.findFirst({
+      where: { id: controlId, organizationId, deletedAt: null },
+    });
+
+    if (!control) {
+      throw new NotFoundError('Control not found');
+    }
+
+    const healthResult = await refreshControlHealth(controlId);
+
+    res.json({
+      success: true,
+      data: healthResult,
     });
   }
 );

@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Lightbulb,
   Activity,
+  Eye,
 } from 'lucide-react';
 import type { ControlDetail } from '../../types/controls';
 import { cn } from '../../lib/utils';
@@ -220,27 +221,46 @@ function RemediationGuidance({
 
 export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMappingChange }: ControlDetailPanelProps) {
   const [isMappingDialogOpen, setIsMappingDialogOpen] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { addMapping, removeMapping, isLoading: isMutating } = useControlMutations();
-  const { health, isLoading: isLoadingHealth, triggerVerification } = useControlHealth(control?.id || null);
+  const { health, isLoading: isLoadingHealth, markReviewed, refreshHealth } = useControlHealth(control?.id || null);
 
   if (!control && !isLoading) {
     return null;
   }
 
-  const handleTriggerVerification = async () => {
-    setIsVerifying(true);
+  // Mark as reviewed - updates lastReviewedAt and grants Review points
+  const handleMarkReviewed = async () => {
+    setIsReviewing(true);
     try {
-      await triggerVerification();
-      toast.success('Verification complete', {
-        description: 'Control health score has been recalculated.',
+      await markReviewed();
+      toast.success('Control marked as reviewed', {
+        description: 'Review date updated and health score recalculated.',
       });
     } catch {
-      toast.error('Verification failed', {
-        description: 'Could not recalculate health score. Please try again.',
+      toast.error('Failed to mark as reviewed', {
+        description: 'Could not update review status. Please try again.',
       });
     } finally {
-      setIsVerifying(false);
+      setIsReviewing(false);
+    }
+  };
+
+  // Refresh health score without updating review date
+  const handleRefreshHealth = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshHealth();
+      toast.success('Health score refreshed', {
+        description: 'Score recalculated based on current data.',
+      });
+    } catch {
+      toast.error('Refresh failed', {
+        description: 'Could not refresh health score. Please try again.',
+      });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -327,16 +347,29 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
                   <Activity className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Health Score</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleTriggerVerification}
-                  disabled={isVerifying || isLoadingHealth}
-                  className="h-7 px-2 text-xs"
-                >
-                  <RefreshCw className={cn("h-3 w-3 mr-1", isVerifying && "animate-spin")} />
-                  {isVerifying ? 'Verifying...' : 'Verify'}
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRefreshHealth}
+                    disabled={isRefreshing || isLoadingHealth}
+                    className="h-7 px-2 text-xs"
+                    title="Refresh score without updating review date"
+                  >
+                    <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkReviewed}
+                    disabled={isReviewing || isLoadingHealth}
+                    className="h-7 px-2 text-xs"
+                    title="Mark as reviewed (updates review date, grants 15 Review points)"
+                  >
+                    <Eye className={cn("h-3 w-3 mr-1", isReviewing && "animate-pulse")} />
+                    {isReviewing ? 'Reviewing...' : 'Mark Reviewed'}
+                  </Button>
+                </div>
               </div>
 
               {isLoadingHealth ? (
@@ -404,10 +437,10 @@ export function ControlDetailPanel({ control, isLoading, onClose, onEdit, onMapp
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleTriggerVerification}
-                    disabled={isVerifying}
+                    onClick={handleRefreshHealth}
+                    disabled={isRefreshing}
                   >
-                    <RefreshCw className={cn("h-3 w-3 mr-1", isVerifying && "animate-spin")} />
+                    <RefreshCw className={cn("h-3 w-3 mr-1", isRefreshing && "animate-spin")} />
                     Calculate Health Score
                   </Button>
                 </div>

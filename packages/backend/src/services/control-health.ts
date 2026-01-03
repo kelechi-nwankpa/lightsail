@@ -369,24 +369,31 @@ export async function getVerificationHistory(
 }
 
 /**
- * Trigger manual verification for a control
- * This recalculates the health score and logs it
+ * Mark a control as reviewed (human review)
+ * Updates lastReviewedAt and recalculates health score
  */
-export async function triggerManualVerification(
+export async function markControlReviewed(
   controlId: string,
   userId: string
 ): Promise<ControlHealthResult> {
-  // Log the health score before updating review date
-  await calculateAndLogControlHealth(controlId, `manual_by_${userId}`);
-
   // Update control's lastReviewedAt
   await prisma.control.update({
     where: { id: controlId },
     data: { lastReviewedAt: new Date() },
   });
 
-  // Recalculate with the updated review date and return
-  const updatedResult = await calculateControlHealth(controlId);
+  // Log and calculate health score with updated review date
+  const healthResult = await calculateAndLogControlHealth(controlId, `review_by_${userId}`);
 
-  return updatedResult;
+  return healthResult;
+}
+
+/**
+ * Recalculate health score without updating review date
+ * Used for refreshing the score display
+ */
+export async function refreshControlHealth(
+  controlId: string
+): Promise<ControlHealthResult> {
+  return calculateControlHealth(controlId);
 }

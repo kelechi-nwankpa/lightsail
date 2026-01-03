@@ -345,21 +345,39 @@ export function useControlHealth(controlId: string | null) {
     fetchHealth();
   }, [fetchHealth]);
 
-  const triggerVerification = async () => {
+  // Mark control as reviewed (updates lastReviewedAt, grants Review points)
+  const markReviewed = async () => {
     if (!controlId) return null;
 
     setIsLoading(true);
     try {
-      const data = await api.post<ControlHealthResult>(`/controls/${controlId}/verify`, {});
+      const data = await api.post<ControlHealthResult>(`/controls/${controlId}/review`, {});
       setHealth(data);
       return data;
     } catch (err) {
-      console.error('Failed to trigger verification:', err);
+      console.error('Failed to mark control as reviewed:', err);
       throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  return { health, isLoading, error, refetch: fetchHealth, triggerVerification };
+  // Refresh health score without updating review date
+  const refreshHealth = async () => {
+    if (!controlId) return null;
+
+    setIsLoading(true);
+    try {
+      const data = await api.post<ControlHealthResult>(`/controls/${controlId}/refresh`, {});
+      setHealth(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to refresh health score:', err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { health, isLoading, error, refetch: fetchHealth, markReviewed, refreshHealth };
 }
