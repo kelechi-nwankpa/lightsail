@@ -223,12 +223,12 @@ export default function Risks() {
   }
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen">
       <main className={cn(
-        "flex-1 transition-all duration-300",
+        "flex-1 min-w-0 transition-all duration-300",
         isDetailOpen ? "mr-[420px]" : ""
       )}>
-        <div className="container mx-auto px-4 py-6">
+        <div className="px-4 py-6 lg:px-6 xl:px-8">
           {/* Breadcrumb */}
           <Breadcrumb className="mb-4">
             <BreadcrumbList>

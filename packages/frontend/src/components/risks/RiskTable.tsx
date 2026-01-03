@@ -25,8 +25,8 @@ interface RiskTableProps {
 export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableProps) {
   if (isLoading) {
     return (
-      <div className="border rounded-lg">
-        <Table>
+      <div className="border rounded-lg overflow-x-auto">
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead>Risk</TableHead>
@@ -72,8 +72,8 @@ export function RiskTable({ risks, isLoading, onSelect, selectedId }: RiskTableP
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
+    <div className="border rounded-lg overflow-x-auto">
+      <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow>
             <TableHead>Risk</TableHead>
